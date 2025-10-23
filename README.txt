@@ -76,7 +76,7 @@ Known issues:
   among packaged python applications. If you are uncomfortable running
   the packaged version, you can directly run the script (.py) version
   instead (available on the Github page below). The script version will
-  require you to have a working installation of python, including the
+  require you to have a working installation of Python, including the
   additional packages "nicegui" and "pillow". Please refer to the
   Python documentation regarding the setup of Python and any of its
   additional packages.
