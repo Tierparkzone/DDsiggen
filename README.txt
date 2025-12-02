@@ -1,45 +1,142 @@
 DDsiggen - Tierparkzone's Forum Signature Generator
-ver.0.17
+ver.1.14
 
-A python-based program/script that takes multiple individual image files and outputs composite images that can be used as a user signature on web forums.
-
-The parameters of the generated output images are designed according to the signature requirements of the DollDreaming forum at "https://www.dolldreaming.com/". Depending on your settings in the software, the generated output images may not actually fulfill the signature requirements of the DollDreaming forum (or any other forum). Please confirm the parameters of the output images yourself.
+A python-based program/script that takes multiple individual image files and text inputs to create composite images for use as a signature on web forums. The generated output images by default are set up to meet the signature requirements of the DollDreaming forum at "https://www.dolldreaming.com/". Depending on your settings in the software, the generated output images may not actually fulfill the signature requirements of the DollDreaming forum (or any other forum). Please confirm the properties of the output images yourself before using them as signatures.
 The author of this software is a user of the DollDreaming forum but in no other way affiliated with DollDreaming.
+
+NOTE: To avoid confusion between input and output images, from here on, this readme and the program itself will refer to input images as "photos" and output images as "signature images". Regardless of this naming, you can use any type of image as the input and are not limited to photos.
+
+
+
+Features:
+
+Two modes are currently available.
+
+Quick Sig:
+Generate a signature from multiple photos with only a few clicks.
+- Batch import photos from the working directory and reorder them
+- Arrange photos into one or two signature images, while keeping their size as large as possible
+- Select one of the provided alpha masks
+- Export the final signature image(s)
+
+Create new:
+Generate a signature with custom text and additional options.
+- Batch import photos from the working directory
+- Import photos one by one from anywhere on your computer or from the web
+- Add or import up to two text layers ("name" and "epithet") that will get applied to the photos
+- Reorder photos and text as desired
+- Select one of the provided alpha masks (photo styles)
+- Customize text font, colors and positions for each text layer (you can also use your own font files)
+- Choose how the photos will be arranged in the signature image(s) or leave it to the program
+- Export the final signature image(s) in multiple resolutions
+
+
+
+Package contents:
+
+The packaged program will provide the below file structure.
+
+DDsiggen_<version No.>_<OS type>        (Working directory)
+|
+|--fonts                    (Place any font files you wish to use in here)
+|  |
+|  |--851CHIKARA-DZUYOKU_kanaA_004.ttf
+|  |
+|  |--851CHIKARA-YOWAKU_002.ttf
+|  |
+|  |--851Gkktt_005.ttf
+|  |
+|  |--851H-kktt_004.ttf
+|  |
+|  |--GenEiPOPle-Bk.ttf
+|  |
+|  |--HachiMaruPop-Regular.ttf
+|
+|--signatures               (Exported signature images will appear in here)
+|  |
+|  |--<empty>
+|
+|
+|--DDsiggen_<version No.><file type>    (The executable itself - File type is .py, .exe  or none)
+|
+|--epithets.txt             (Text you enter here can be applied to the "epithet" text layer of an image)
+|
+|--LICENSE.txt              (License information)
+|
+|--names.txt                (Text you enter here can be applied to the "name" text layer of an image)
+|
+|--README.txt               (This readme file)
 
 
 
 How to use:
 
-- Place the image files you wish to use in your signature into the same folder as this executable (.py or .exe file).
+Preparing photos for batch import:
+- Copy any photo files that you wish to use in your signature into the working directory (the same folder as this executable).
+- Supported file formats are .jpg, .jpeg, .png, .JPG, .JPEG and .PNG.
+- If you skip this step, you will only be able to import images one by one through the "Add photo" buttons in the "Create New" mode.
 
-- Launch the executable.
+Preparing custom text for import:
+- Enter the text you wish to import into the "names.txt" and "epithets.txt" files. The contents of these files can then be applied to their respective text layers.
+- Each new line in the text file  will be applied to the next photo.
+- Save the text files in Unicode (UTF-8) format if possible.
+- If you skip this step, you will have to enter all text manually inside the program.
 
-- A terminal window will open. (Unless the executable was launched via terminal.)
+Preparing custom fonts:
+- The packaged program alredy provides a few default fonts inside the "fonts" subfolder.
+- Users are free to copy any of their own font files into the "fonts" subfolder, to use inside the program.
+- Supported file formats are .ttf, .otf, .TTF and .OTF.
+- If you would like to use non-alphanumeric scripts in your signature (e.g. Chinese, Japanese, Korean), please provide a font that supports that script.
+- The default fonts packaged with this program mostly support Japanese script, but may lack some special Kanji.
+- If the generated text appears garbled or as rectangles inside the program, the selected font does not support the script of the current text. Select a different font.
 
-- Shortly afterward, your browser will open a new tab displaying the application.
-  NOTE: On first launch, you may get a firewall alert. The current version of this application should work without impairment, even if the communication request is denied.
+Running the executable/script:
+- The packaged executable (.exe on Windows, no file extension on Linux) can be launched via double click, right click -> Run, or right click -> Run in terminal.
+- The bare python script is best run from terminal with $<your python environment> DDsiggen.py
+- First execution of the packaged executable on Windows will likely trigger SmartScreen, since the program is not digitally signed. Select "More information -> Run anyway" to start the program.
+- A terminal window will open. (Unless the executable/script was already launched via terminal.)
+- Shortly afterward, your browser will open a new tab displaying the program's UI.
+- On first launch, you may get a firewall alert. Denying the communication request will at most impact your ability to import images from the web. Everything else will function regardless.
+- Select either "Quick Sig" or "Create New" and follow the instructions in the program to generate your signature images.
+- Exported signature images will be placed into the "signatures" subfolder.
+- Newly exported signature images may overwrite older ones. Copy and/or rename older signature images that you wish to keep.
 
-- Follow the instructions in the browser tab to generate your signature images. Currently, only the "Quick Sig" functionality is available.
+Exiting the program:
+- If you use any of the "Exit Application" buttons in program's UI, the terminal window will close automatically. (If the executable/script was launched from terminal, it will return to your default input prompt.) You may now close the browser tab.
+- Closing the terminal window will terminate the program and your browser tab will eventually display a "Connection lost" message. You may now close the browser tab.
+- Simply closing your browser tab will not terminate the program! (By reopening the tab, you may continue where you left off.) Close the terminal window to fully terminate the program.
 
-- Exported signature images can be found in the "signatures" subfolder.
 
 
-
-Closing the application:
-
-- If you use any of the "Exit Application" buttons in the browser tab, the terminal window will close automatically. (If the executable was launched from terminal, it will return to your default input prompt.) You may now close the browser tab.
-
-- Closing the terminal window will terminate the application and your browser tab will display a "Connection lost" message. You may now close the browser tab.
-
-  NOTE: Simply closing your browser tab will not terminate the application! By reopening the tab (e.g. by using your browser's reopen recently closed tab functionality) you may continue where you left off. To terminate the application use either of the two methods described above.
+Running/packing the Python script:
+- The packing command for PyInstaller / NiceGUI-pack can be found at the bottom of the "DDsiggen.py" script file.
+- Before packing, comment/uncomment the lines in the script that are marked as such.
+- Simply running the script should not require commenting/uncommenting any lines.
+- To run the script, you will require the Python packages nicegui, pillow and requests.
+- To pack the script you will also require the Python package pyinstaller.
+- If you encounter any issues when running or packing the script, try again with the Python and package versions listed below.
+- The script is known to work with:
+   Python        3.13.7
+   nicegui       2.24.2
+   pillow        11.3.0
+   requests      2.23.5
+   pyinstaller   6.16.0
 
 
 
 Known issues:
 
-- If many images are imported with the "Scan Folder" function, the application may appear to hang during the "Importing..." notice. In such a case, check the output in the terminal window: If the most recent message there is "Quick Import Completed!", refresh your browser tab. Your imported images should now be displayed. If the most recent message in the terminal window is "Importing...", the image import is just taking a lot of time. You may want to remove any unnecessary images from the folder of the executable to speed up future imports.
+Original transparency of photos is discarded:
+If any of the imported photos are PNGs with transparent areas, their original transparency information will be ignored during signature generation. Instead the transparency of the selected alpha mask is applied.
 
-- The packaged (.exe) version of this software may get flagged by overzealous anti-virus programs. This appears to be relatively common among packaged python applications. If you are uncomfortable running the packaged version, you can directly run the script (.py) version instead (available on the Github page below). The script version will require you to have a working installation of Python, including the additional packages "nicegui" and "pillow". Please refer to the Python documentation regarding the setup of Python and any of its additional packages.
+Lag when batch importing a large amount of photos:
+If a large amount of images is imported with the batch import ("Scan Folder" button), the program may appear to hang while "Importing..." is displayed on screen. In such a case, check the output in the terminal window: If the most recent message there is "Importing..." as well, the program is indeed still reading in the photo files. Please wait a while. If the most recent message in the terminal is either "Quick Import Completed!" or "New Import Completed!", refresh your browser tab. Your imported images should now be displayed. The required number of photos to encounter this bug depends on your hardware and the size of your individual photo files. If you import fewer than 30 photos at once, you should not encounter this.
+
+Text outline may appear garbled or spotty:
+Some combinations of font, font size and outline thickness may cause the outline of text to appear garbled or have holes. This may be caused by the font file itself or by how Pillow draws text outlines. Try some different text/outline setting combinations.
+
+Packaged Program may get flagged as virus:
+During beta testing, the packaged executable of this software occasionally got flagged as a virus and quarantined by Windows defender. (This is different from SmartScreen simply preventing it from running.) This should not happen anymore. If your anti-virus gets triggered by this program, do not run it! Instead, please inform me of this through the program's GitHub page (link below). If you still want to run the program, try a different version or run the script (.py) directly in Python.
 
 
 
