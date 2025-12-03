@@ -1,5 +1,5 @@
 DDsiggen - Tierparkzone's Forum Signature Generator
-ver.1.13
+ver.1.16
 
 A python-based program/script that takes multiple individual image files and text inputs to create composite images for use as a signature on web forums. The generated output images by default are set up to meet the signature requirements of the DollDreaming forum at "https://www.dolldreaming.com/". Depending on your settings in the software, the generated output images may not actually fulfill the signature requirements of the DollDreaming forum (or any other forum). Please confirm the properties of the output images yourself before using them as signatures.
 The author of this software is a user of the DollDreaming forum but in no other way affiliated with DollDreaming.
@@ -105,8 +105,6 @@ Exiting the program:
 - If you use any of the "Exit Application" buttons in program's UI, the terminal window will close automatically. (If the executable/script was launched from terminal, it will return to your default input prompt.) You may now close the browser tab.
 - Closing the terminal window will terminate the program and your browser tab will eventually display a "Connection lost" message. You may now close the browser tab.
 - Simply closing your browser tab will not terminate the program! (By reopening the tab, you may continue where you left off.) Close the terminal window to fully terminate the program.
-
-
 
 Running/packing the Python script:
 - The packing command for PyInstaller / NiceGUI-pack can be found at the bottom of the "DDsiggen.py" script file.

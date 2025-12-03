@@ -13,7 +13,7 @@ import requests
 #import imageio as iio
 
 #Version Number
-version_no = "1.13"
+version_no = "1.16"
 
 
 
@@ -77,11 +77,10 @@ async def import_quick_alert():
 
 #Import Images (create new)
 
-def import_new(wait_dialog):
+def import_new(wait_dialog, import_mode):
 	global new_updated_flag
 	global new_undoable_flag
 	global I_new
-	global I_new_bak
 	global I_new_undo
 	global namesE
 	global namesE_undo
@@ -105,12 +104,12 @@ def import_new(wait_dialog):
 	for image in images:
 		I_fullscale.append(Image.open(image))
 
-	I_new = []
+	if import_mode == "Overwrite":
+		I_new = []
 	for image in I_fullscale:
 		ImageOps.exif_transpose(image=image, in_place=True)
 		I_new.append(ImageOps.fit(image=image, size=[200,200], method=Image.Resampling.LANCZOS, centering=[0.5,0.0]))
 
-	I_new_bak = I_new.copy()
 	I_new_padnames()
 	new_ui_characterlist.refresh()
 	new_button_undoDisplay.refresh()
@@ -119,12 +118,24 @@ def import_new(wait_dialog):
 	#ui.notify(f"{len(I_new)} photos found")
 	print("New Import Completed!")
 
-def import_new_launch():
+async def import_new_launch():
+	with ui.dialog().props("persistent") as import_mode_dialog, ui.card():
+		with ui.column().classes("items-center"):
+			ui.label("Entries already exist in the photo column. How do you wish to import the new photos?").style("max-width:300px;")
+			ui.button("Overwrite",on_click=lambda: import_mode_dialog.submit("Overwrite")).style("width:200px;")
+			ui.button("Append",on_click=lambda: import_mode_dialog.submit("Append")).style("width:200px;")
+			ui.button("Cancel",on_click=lambda: import_mode_dialog.submit("Cancel")).props("color=positive").style("width:200px;")
 	with ui.dialog().props("persistent") as wait_dialog, ui.card():
 		with ui.row():
 			ui.spinner()
 			ui.label("Importing...")
-	wait_dialog.on("show",lambda:import_new(wait_dialog))
+	if I_new:
+		import_mode = await import_mode_dialog
+	else:
+		import_mode = "Overwrite"
+	if import_mode == "Cancel":
+		return()
+	wait_dialog.on("show",lambda:import_new(wait_dialog, import_mode))
 	wait_dialog.open()
 
 
@@ -156,7 +167,6 @@ async def import_from_url():
 	global new_updated_flag
 	global new_undoable_flag
 	global I_new
-	global I_new_bak
 	global I_new_undo
 	global namesE
 	global namesE_undo
@@ -192,7 +202,6 @@ async def import_local():
 	global new_updated_flag
 	global new_undoable_flag
 	global I_new
-	global I_new_bak
 	global I_new_undo
 	global namesE
 	global namesE_undo
@@ -226,7 +235,7 @@ async def import_local():
 
 #Import other data
 
-def import_namesE():
+async def import_namesE():
 	global new_updated_flag
 	global new_undoable_flag
 	global I_new
@@ -236,22 +245,44 @@ def import_namesE():
 	global namesJ
 	global namesJ_undo
 
+	with ui.dialog().props("persistent") as import_mode_dialog, ui.card():
+		with ui.column().classes("items-center"):
+			ui.label("Entries already exist in the name column. How do you wish to import the new names?").style("max-width:300px;")
+			ui.button("Overwrite",on_click=lambda: import_mode_dialog.submit("Overwrite")).style("width:200px;")
+			ui.button("Append",on_click=lambda: import_mode_dialog.submit("Append")).style("width:200px;")
+			ui.button("Cancel",on_click=lambda: import_mode_dialog.submit("Cancel")).props("color=positive").style("width:200px;")
+
+	if I_new_checkemptynames(namesE):
+		import_mode = await import_mode_dialog
+	else:
+		import_mode = "Overwrite"
+	if import_mode == "Cancel":
+		return()
 	I_new_undo = I_new.copy()
 	namesE_undo = namesE.copy()
 	namesJ_undo = namesJ.copy()
-	if os.path.isfile("names.txt"):
-		f_namesE = open("names.txt","r",encoding="utf-8")
-		namesE = f_namesE.readlines()
-		namesE = [i.rstrip() for i in namesE]
+	if import_mode == "Append":
+		while len(namesE)>0:
+			if namesE[len(namesE)-1]=="":
+				namesE.pop(len(namesE)-1)
+			else:
+				break
 	else:
 		namesE = []
+	try:
+		f_namesE = open("names.txt","r",encoding="utf-8")
+	except:
 		ui.notify("File 'names.txt' was not found!")
+	else:
+		new_namesE = f_namesE.readlines()
+		new_namesE = [i.rstrip() for i in new_namesE]
+		namesE = namesE+new_namesE
 	I_new_padnames()
 	new_ui_characterlist.refresh()
 	new_button_undoDisplay.refresh()
 
 
-def import_namesJ():
+async def import_namesJ():
 	global new_updated_flag
 	global new_undoable_flag
 	global I_new
@@ -261,16 +292,38 @@ def import_namesJ():
 	global namesJ
 	global namesJ_undo
 
+	with ui.dialog().props("persistent") as import_mode_dialog, ui.card():
+		with ui.column().classes("items-center"):
+			ui.label("Entries already exist in the epithet column. How do you wish to import the new epithets?").style("max-width:300px;")
+			ui.button("Overwrite",on_click=lambda: import_mode_dialog.submit("Overwrite")).style("width:200px;")
+			ui.button("Append",on_click=lambda: import_mode_dialog.submit("Append")).style("width:200px;")
+			ui.button("Cancel",on_click=lambda: import_mode_dialog.submit("Cancel")).props("color=positive").style("width:200px;")
+
+	if I_new_checkemptynames(namesJ):
+		import_mode = await import_mode_dialog
+	else:
+		import_mode = "Overwrite"
+	if import_mode == "Cancel":
+		return()
 	I_new_undo = I_new.copy()
 	namesE_undo = namesE.copy()
 	namesJ_undo = namesJ.copy()
-	if os.path.isfile("epithets.txt"):
-		f_namesJ = open("epithets.txt","r",encoding="utf-8")
-		namesJ = f_namesJ.readlines()
-		namesJ = [i.rstrip() for i in namesJ]
+	if import_mode == "Append":
+		while len(namesJ)>0:
+			if namesJ[len(namesJ)-1]=="":
+				namesJ.pop(len(namesJ)-1)
+			else:
+				break
 	else:
 		namesJ = []
+	try:
+		f_namesJ = open("epithets.txt","r",encoding="utf-8")
+	except:
 		ui.notify("File 'epithets.txt' was not found!")
+	else:
+		new_namesJ = f_namesJ.readlines()
+		new_namesJ = [i.rstrip() for i in new_namesJ]
+		namesJ = namesJ+new_namesJ
 	I_new_padnames()
 	new_ui_characterlist.refresh()
 	new_button_undoDisplay.refresh()
@@ -297,6 +350,13 @@ def I_new_reducenames():
 			namesJ.pop(len(namesJ)-1)
 		else:
 			break
+
+def I_new_checkemptynames(namelist):
+	anynames_flag = False
+	for name in namelist:
+		if name != "":
+			anynames_flag = True
+	return(anynames_flag)
 
 
 def scan_fonts():
@@ -582,7 +642,7 @@ def I_new_movedn(current_idx) -> None:
 	new_ui_characterlist.refresh()
 	new_button_undoDisplay.refresh()
 	
-def I_new_clear():
+async def I_new_clear():
 	global new_updated_flag
 	global new_undoable_flag
 	global I_new
@@ -591,14 +651,23 @@ def I_new_clear():
 	global namesE_undo
 	global namesJ
 	global namesJ_undo
+
+	with ui.dialog().props("persistent") as confirm_clear_dialog, ui.card():
+		ui.label("Clear all photos?")
+		with ui.row():
+			ui.button("Continue",on_click=lambda: confirm_clear_dialog.submit(True)).style("width:200px;")
+			ui.button("Cancel",on_click=lambda: confirm_clear_dialog.submit(False)).props("color=positive").style("width:200px;")
+
 	if I_new:
-		new_updated_flag = False
-		I_new_undo = I_new.copy()
-		namesE_undo = namesE.copy()
-		namesJ_undo = namesJ.copy()
-		I_new = []
-		I_new_reducenames()
-		new_undoable_flag = True
+		is_continue = await confirm_clear_dialog
+		if is_continue:
+			new_updated_flag = False
+			I_new_undo = I_new.copy()
+			namesE_undo = namesE.copy()
+			namesJ_undo = namesJ.copy()
+			I_new = []
+			I_new_reducenames()
+			new_undoable_flag = True
 	new_ui_characterlist.refresh()
 	new_button_undoDisplay.refresh()
 	new_ui_siglayout.refresh()
@@ -641,7 +710,7 @@ def namesE_movedn(current_idx) -> None:
 	new_ui_characterlist.refresh()
 	new_button_undoDisplay.refresh()
 	
-def namesE_clear():
+async def namesE_clear():
 	global new_updated_flag
 	global new_undoable_flag
 	global I_new
@@ -650,14 +719,23 @@ def namesE_clear():
 	global namesE_undo
 	global namesJ
 	global namesJ_undo
-	if namesE:
+
+	with ui.dialog().props("persistent") as confirm_clear_dialog, ui.card():
+		ui.label("Clear all names?")
+		with ui.row():
+			ui.button("Continue",on_click=lambda: confirm_clear_dialog.submit(True)).style("width:200px;")
+			ui.button("Cancel",on_click=lambda: confirm_clear_dialog.submit(False)).props("color=positive").style("width:200px;")
+
+	if I_new_checkemptynames(namesE):
 		#new_updated_flag = False
-		I_new_undo = I_new.copy()
-		namesE_undo = namesE.copy()
-		namesJ_undo = namesJ.copy()
-		namesE = []
-		I_new_padnames()
-		new_undoable_flag = True
+		is_continue = await confirm_clear_dialog
+		if is_continue:
+			I_new_undo = I_new.copy()
+			namesE_undo = namesE.copy()
+			namesJ_undo = namesJ.copy()
+			namesE = []
+			I_new_padnames()
+			new_undoable_flag = True
 	new_ui_characterlist.refresh()
 	new_button_undoDisplay.refresh()
 
@@ -699,7 +777,7 @@ def namesJ_movedn(current_idx) -> None:
 	new_ui_characterlist.refresh()
 	new_button_undoDisplay.refresh()
 	
-def namesJ_clear():
+async def namesJ_clear():
 	global new_updated_flag
 	global new_undoable_flag
 	global I_new
@@ -708,14 +786,23 @@ def namesJ_clear():
 	global namesE_undo
 	global namesJ
 	global namesJ_undo
-	if namesJ:
+
+	with ui.dialog().props("persistent") as confirm_clear_dialog, ui.card():
+		ui.label("Clear all epithets?")
+		with ui.row():
+			ui.button("Continue",on_click=lambda: confirm_clear_dialog.submit(True)).style("width:200px;")
+			ui.button("Cancel",on_click=lambda: confirm_clear_dialog.submit(False)).props("color=positive").style("width:200px;")
+
+	if I_new_checkemptynames(namesJ):
 		#new_updated_flag = False
-		I_new_undo = I_new.copy()
-		namesE_undo = namesE.copy()
-		namesJ_undo = namesJ.copy()
-		namesJ = []
-		I_new_padnames()
-		new_undoable_flag = True
+		is_continue = await confirm_clear_dialog
+		if is_continue:
+			I_new_undo = I_new.copy()
+			namesE_undo = namesE.copy()
+			namesJ_undo = namesJ.copy()
+			namesJ = []
+			I_new_padnames()
+			new_undoable_flag = True
 	new_ui_characterlist.refresh()
 	new_button_undoDisplay.refresh()
 
@@ -827,7 +914,7 @@ def generate_newlayout(image_layout, custom_columns, custom_rows):
 		new_layout_columns=custom_columns
 		new_layout_rows=custom_rows
 	else:
-		if image_layout=="Auto: One Image":
+		if image_layout=="Auto: One Image" or nchar==1:
 			new_layout_images=1
 		elif image_layout=="Auto: Two Images":
 			new_layout_images=2
@@ -991,9 +1078,9 @@ def new_generate_textlayers(text_no):
 		textlayerE = Image.new("RGBA",(800,textEheight),(0,0,0,0))
 		dd = ImageDraw.Draw(textlayerE)
 		if colorEoutline:
-			dd.text((sizeEoutline,sizeEoutline), namesE[text_no], fill=colorEmain, stroke_width=sizeEoutline, stroke_fill=colorEoutline, font=ImageFont.truetype(f"./fonts/{fontE.value}", sizeEmain))
+			dd.text((sizeEoutline,sizeEoutline), namesE[text_no], fill=colorEmain+transpEmain, stroke_width=sizeEoutline, stroke_fill=colorEoutline+transpEoutline, font=ImageFont.truetype(f"./fonts/{fontE.value}", sizeEmain))
 		else:
-			dd.text((0,0),namesE[text_no], fill=colorEmain, font=ImageFont.truetype(f"./fonts/{fontE.value}", sizeEmain))
+			dd.text((0,0),namesE[text_no], fill=colorEmain+transpEmain, font=ImageFont.truetype(f"./fonts/{fontE.value}", sizeEmain))
 	else:
 		textlayerE=False
 	if fontJ.value and namesJ[text_no]:
@@ -1004,9 +1091,9 @@ def new_generate_textlayers(text_no):
 		textlayerJ = Image.new("RGBA",(800,textJheight),(0,0,0,0))
 		dd = ImageDraw.Draw(textlayerJ)
 		if colorJoutline:
-			dd.text((sizeJoutline,sizeJoutline), namesJ[text_no], fill=colorJmain, stroke_width=sizeJoutline, stroke_fill=colorJoutline, font=ImageFont.truetype(f"./fonts/{fontJ.value}", sizeJmain))
+			dd.text((sizeJoutline,sizeJoutline), namesJ[text_no], fill=colorJmain+transpJmain, stroke_width=sizeJoutline, stroke_fill=colorJoutline+transpJoutline, font=ImageFont.truetype(f"./fonts/{fontJ.value}", sizeJmain))
 		else:
-			dd.text((0,0),namesJ[text_no], fill=colorJmain, font=ImageFont.truetype(f"./fonts/{fontJ.value}", sizeJmain))
+			dd.text((0,0),namesJ[text_no], fill=colorJmain+transpJmain, font=ImageFont.truetype(f"./fonts/{fontJ.value}", sizeJmain))
 		#textlayerJ.show()
 	else:
 		textlayerJ=False
@@ -1015,7 +1102,11 @@ def new_generate_textlayers(text_no):
 def sig_textcropper(textimage):
 	textimage2 = textimage.copy()
 	cropheight = textimage2.size[1]
-	cropwidth = textimage2.getbbox()[2]+textimage2.getbbox()[0]
+	try:
+		cropwidth = textimage2.getbbox()[2]+textimage2.getbbox()[0]
+	except:
+		cropwidth = 50
+		print("Text layer is empty!")
 	textimage2 = textimage2.crop((0,0,cropwidth,cropheight))
 	if textimage2.size[0]>200 and new_handle_oversize.value=="Squish":
 		textimage2=textimage2.resize(size=(200,cropheight),resample=Image.Resampling.LANCZOS)
@@ -1122,13 +1213,21 @@ def update_textsample():
 	global textsample_no
 	global sizeEmain
 	global sizeEoutline
+	global transpEmain
+	global transpEoutline
 	global sizeJmain
 	global sizeJoutline
+	global transpJmain
+	global transpJoutline
 	textsample_no = select_textsample_no.value
 	sizeEmain=slider_sizeEmain.value
 	sizeEoutline=slider_sizeEoutline.value
+	transpEmain=format(math.ceil(slider_transpEmain.value*2.55),"02x")
+	transpEoutline=format(math.ceil(slider_transpEoutline.value*2.55),"02x")
 	sizeJmain=slider_sizeJmain.value
 	sizeJoutline=slider_sizeJoutline.value
+	transpJmain=format(math.ceil(slider_transpJmain.value*2.55),"02x")
+	transpJoutline=format(math.ceil(slider_transpJoutline.value*2.55),"02x")
 	textlayerE, textlayerJ = new_generate_textlayers(textsample_no-1)
 	try:
 		sampleE = textlayerE.copy()
@@ -1193,7 +1292,6 @@ I_quick_undo = []
 I_quick_bak = []
 I_new = []
 I_new_undo = []
-I_new_bak = []
 new_sig_scaled = []
 layout_images = 0
 layout_rows = 0
@@ -1322,7 +1420,7 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 		ui.label("QUICKLY GENERATE A SIMPLE SIGNATURE.")
 		with ui.row(wrap=True):
 			ui.label("How to use:")
-			ui.label("Place the photos you want to use in your signature into the same folder as this executable, then hit 'SCAN FOLDER'. If your photos show up below, you're good to go.").style("max-width:450px;")
+			ui.label("Copy the photos that you want to use in your signature into the same folder as this executable, then click 'SCAN FOLDER'. If your photos show up below, you're good to go.").style("max-width:450px;")
 		
 		@ui.refreshable
 		def quick_button_undoDisplay () -> None:
@@ -1468,7 +1566,7 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 								
 				ui.separator()
 
-				ui.label("03. Select photo style:")
+				ui.label("03. Select alpha mask:")
 				ui.label("Chose what appearance the individual photos should have in your signature. (Black areas will become transparent.)").style("max-width:550px;")
 
 				def AMset(AMvalue):
@@ -1571,7 +1669,7 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 				ui.separator()
 				
 				ui.label("04. Generate & export signature:")		
-				ui.label("If you like the layout and the photo style, click on 'GENERATE SIGNATURE' to preview the final image(s). You can still change the photo style and re-generate the singature without having to update the layout.").style("max-width:550px;")
+				ui.label("If you like the layout and the alpha mask, click on 'GENERATE SIGNATURE' to preview the final image(s). You can still change the alpha mask and re-generate the singature without having to update the layout.").style("max-width:550px;")
 				quick_button_genSig()
 	
 		quick_ui_layoutDisplay()
@@ -1609,12 +1707,12 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 			with ui.column().classes("items-center"):
 				ui.icon("o_info", size="100px")
 				ui.label("All photos listed in the photo table will be combined into your signature image(s). You can add photos to the photo table in three ways:").style("max-width:450px;")
-				ui.label("(1) Like in the 'Quick Sig' panel, you can import multiple local images at once. Copy the photos you want to use in your signature into the same folder as this executable, then click the 'SCAN FOLDER' button. This will add all image files in the folder to the list. Supported are .jpg, .png, .jpeg, .JPG, .PNG, and .JPEG image files.").style("max-width:450px;")
+				ui.label("(1) Like in the 'Quick Sig' panel, you can import multiple local images at once. Copy the photos you want to use in your signature into the same folder as this executable (the 'working directory'), then click the 'SCAN FOLDER' button. This will add all image files in the working directory to the list. Supported are .jpg, .png, .jpeg, .JPG, .PNG, and .JPEG image files.").style("max-width:450px;")
 				ui.label("(2) You can import images one by one from anywhere on cour computer. Use the 'Add photo: +' button on the bottom of the list, then browse your files or drag & drop in an image file.").style("max-width:450px;")
 				ui.label("(3) You can import images one by one from the web. Use the 'Add photo: Web' button on the bottom of the list, then enter the URL to an image file.").style("max-width:450px;")
 				with ui.row():
 					ui.icon("o_announcement",color="primary", size="25px")
-					ui.label("All rows that contain photos will be included in your signature. Rows that contain only text (Names/Epithets) will be ignored when generating a signature.").style("max-width:350px;")
+					ui.label("All rows that contain photos will be included in your signature. Rows that contain only text (names/epithets) will be ignored when generating a signature.").style("max-width:350px;")
 				ui.button("Close", on_click=help_new_photos_dialog.close, color="positive")
 
 		with ui.dialog() as help_new_names_dialog, ui.card():
@@ -1625,11 +1723,11 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 					ui.icon("o_announcement",color="primary", size="25px")
 					ui.label("The text may not contain any line breaks. Too long text strings may not get applied correctly.").style("max-width:350px;")
 				ui.label("If you don't want to enter names into the table one by one, you can import them from a text file instead:").style("max-width:450px;")
-				ui.label("You can enter the names you want to use into the 'names.txt' text file that is located in the same folder as this executable. (Delete the sample text inside the file first). Put every name you want to enter on a separate line. Save the file, then click the 'READ NAMES.TXT' button.").style("max-width:450px;")
+				ui.label("You can enter the names you want to use into the 'names.txt' text file that is located in the same folder as this executable. (Delete the sample text inside the file first.) Put every name you want to enter on a separate line. Save the file, then click the 'READ NAMES.TXT' button.").style("max-width:450px;")
 				ui.label("If you don't have a 'names.txt' file, you can create it yourself. Just make sure it's a plain text (.txt) file, preferrably with Unicode (UTF-8) encoding.").style("max-width:450px;")
 				with ui.row():
 					ui.icon("o_announcement",color="primary", size="25px")
-					ui.label("Rows that contain only text (Names/Epithets) will be ignored when generating a signature.").style("max-width:350px;")
+					ui.label("Rows that contain only text (names/epithets) will be ignored when generating a signature.").style("max-width:350px;")
 				ui.button("Close", on_click=help_new_names_dialog.close, color="positive")
 
 		with ui.dialog() as help_new_epithets_dialog, ui.card():
@@ -1640,28 +1738,28 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 					ui.icon("o_announcement",color="primary", size="25px")
 					ui.label("The text may not contain any line breaks. Too long text strings may not get applied correctly.").style("max-width:350px;")
 				ui.label("If you don't want to enter epithets into the table one by one, you can import them from a text file instead:").style("max-width:450px;")
-				ui.label("You can enter the epithets you want to use into the 'epithets.txt' text file that is located in the same folder as this executable. (Delete the sample text inside the file first). Put every epithet you want to enter on a separate line. Save the file, then click the 'READ EPITHETS.TXT' button.").style("max-width:450px;")
+				ui.label("You can enter the epithets you want to use into the 'epithets.txt' text file that is located in the same folder as this executable. (Delete the sample text inside the file first.) Put every epithet you want to enter on a separate line. Save the file, then click the 'READ EPITHETS.TXT' button.").style("max-width:450px;")
 				ui.label("If you don't have an 'epithets.txt' file, you can create it yourself. Just make sure it's a plain text (.txt) file, preferrably with Unicode (UTF-8) encoding.").style("max-width:450px;")
 				with ui.row():
 					ui.icon("o_announcement",color="primary", size="25px")
-					ui.label("Rows that contain only text (Names/Epithets) will be ignored when generating a signature.").style("max-width:350px;")
+					ui.label("Rows that contain only text (names/epithets) will be ignored when generating a signature.").style("max-width:350px;")
 				ui.button("Close", on_click=help_new_epithets_dialog.close, color="positive")
 
 		with ui.dialog() as help_new_fonts_dialog, ui.card():
 			with ui.column().classes("items-center"):
 				ui.icon("o_info", size="100px")
-				ui.label("You can select which fonts to apply to your name and epithet texts. The application comes bundled with a few fonts in the 'fonts' subfolder, located in the same folder as this executable.").style("max-width:450px;")
+				ui.label("You can select which fonts to apply to your name and epithet texts. The application comes bundled with a few fonts in the 'fonts' subfolder.").style("max-width:450px;")
 				ui.label("If you would like to use other fonts, you can copy any of your own font files into the 'fonts' subfolder and then click on 'SCAN FONTS' below. Supported are .ttf, .otf, .TTF and .OTF font files.").style("max-width:450px;")
 				ui.button("Scan Fonts", on_click=lambda: rescan_fonts())
 				with ui.row():
 					ui.icon("o_announcement",color="primary", size="25px")
-					ui.label("If you're using non-alphanumeric scripts (e.g. Japanese, Korean, Arabic, ...)' as Names/Epithets, make sure you use a font that supports the corresponding script. The fonts bundled with this application support Japanese scripts, but please provide your own font(s) if you wish to use other scripts. If the text in the sample images below appears garbled or as rectangles, this usually indicates that the selected font does not support the current script.").style("max-width:350px;")
+					ui.label("If you're using non-alphanumeric scripts (e.g. Chinese, Japanese, Korean, ...)' as names/epithets, make sure you use a font that supports the corresponding script. The fonts bundled with this application support Japanese scripts, but please provide your own font(s) if you wish to use other scripts. If glyphs in the sample images below appear garbled, missing or as rectangles, this usually indicates that the selected font does not support the current script.").style("max-width:350px;")
 				ui.button("Close", on_click=help_new_fonts_dialog.close, color="positive")
 
 		with ui.dialog() as help_new_alignment_dialog, ui.card():
 			with ui.column().classes("items-center"):
 				ui.icon("o_info", size="100px")
-				ui.label("You can select the edge/cornter of the photo that names and epithets will automatically align to. Since every font uses slightly different spacing, you can use the 'Offset' horizontal and vertical sliders to fine-tune the position afterwards. Change the 'Sample from entry #' above, to check how your settings look on any of your entries in the photo table.").style("max-width:450px;")
+				ui.label("You can select the edge/corner of the photo to which names and epithets will automatically align to. Since every font uses slightly different spacing, you can use the 'Offset' horizontal and vertical sliders to fine-tune the position afterwards. Change the 'Sample from entry #' above, to check how your settings look on any of your entries in the photo table.").style("max-width:450px;")
 				with ui.row():
 					ui.icon("o_announcement",color="primary", size="25px")
 					ui.label("The 'Squish' and 'Shrink' settings above will produce best results with a horizontal 'Offset' of 0.").style("max-width:350px;")
@@ -1805,7 +1903,7 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 				ui.label(" ")
 				with ui.button_group().classes("col-span-2"):
 					with ui.button("Scan Folder",on_click=lambda:import_new_launch()).style("width:178px;"):
-						ui.tooltip("Scan for images in the executable folder.").props("max-width='200px'").classes("default_tooltip")
+						ui.tooltip("Scan for images in the working directory.").props("max-width='200px'").classes("default_tooltip")
 					ui.button(icon="o_help_outline", on_click=help_new_photos_dialog.open, color="positive").style("width:35px;")
 				with ui.button_group().classes("col-span-2"):
 					with ui.button("Read 'names.txt'",on_click=lambda:import_namesE()).style("width:178px;"):
@@ -1940,24 +2038,32 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 			ui.label(" ").classes("col-span-3")
 			with ui.column().classes("col-span-2"):
 				with ui.button_group(): #with ui.row().classes("gap-0"):
-					with ui.button("Fill Color", icon="o_format_color_text").style("width:150px;"):
+					with ui.button("Text Color", icon="o_format_color_text").style("width:150px;"):
 						ui.color_picker(on_pick=lambda e: set_colorEmain(e.color))
 					with ui.button(icon="o_palette", on_click=lambda:set_colorEmain("#ff6065"), color="positive").style("width:50px;"):
 						ui.tooltip("Default color").props("max-width='200px'").classes("default_tooltip")
 			with ui.column().classes("col-span-2"):
 				with ui.button_group():
-					with ui.button("Fill Color", icon="o_format_color_text").style("width:150px;"):
+					with ui.button("Text Color", icon="o_format_color_text").style("width:150px;"):
 						ui.color_picker(on_pick=lambda e: set_colorJmain(e.color))
 					with ui.button(icon="o_content_copy", on_click=lambda:set_colorJmain(colorEmain), color="positive").style("width:50px;"):
 						ui.tooltip("Copy current fill color from names").props("max-width='200px'").classes("default_tooltip")
 			ui.label(" ")
-
+	
 			ui.label(" ")
-			with ui.column().classes("col-span-2"):
+			with ui.column().classes("col-span-2 gap-0"):
+				ui.element("spacer").style("height:5px;")
 				with ui.row().classes("items-center"):
 					ui.space()
-					ui.label("Font Size:")
+					ui.label("Text Opacity:")
+				ui.element("spacer").style("height:20px;")
+				with ui.row().classes("items-center"):
+					ui.space()
+					ui.label("Text Size:")
 			with ui.column().classes("col-span-2"):
+				with ui.row().classes("items-center"):
+					slider_transpEmain = ui.slider(min=5,max=100,step=5,value=100, on_change=lambda:update_textsample()).style("width:160px;")
+					ui.label().bind_text_from(slider_transpEmain,"value")
 				with ui.row().classes("items-center"):
 					slider_sizeEmain = ui.slider(min=6,max=88,value=30, on_change=lambda:update_textsample()).style("width:160px;")
 					ui.label().bind_text_from(slider_sizeEmain,"value")
@@ -1967,6 +2073,9 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 					with ui.button(icon="o_format_color_reset", on_click=lambda:set_colorEoutline(False), color="secondary").style("width:50px;"):
 						ui.tooltip("No text outline").props("max-width='200px'").classes("default_tooltip")
 			with ui.column().classes("col-span-2"):
+				with ui.row().classes("items-center"):
+					slider_transpJmain = ui.slider(min=5,max=100,step=5,value=100, on_change=lambda:update_textsample()).style("width:160px;")
+					ui.label().bind_text_from(slider_transpJmain,"value")
 				with ui.row().classes("items-center"):
 					slider_sizeJmain = ui.slider(min=6,max=88,value=30, on_change=lambda:update_textsample()).style("width:160px;")
 					ui.label().bind_text_from(slider_sizeJmain,"value")
@@ -1980,15 +2089,26 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 			ui.label(" ")
 
 			ui.label(" ")
-			with ui.column().classes("col-span-2"):
+			with ui.column().classes("col-span-2 gap-0"):
+				ui.element("spacer").style("height:5px;")
+				with ui.row().classes("items-center"):
+					ui.space()
+					ui.label("Outline Opacity:")
+				ui.element("spacer").style("height:20px;")
 				with ui.row().classes("items-center"):
 					ui.space()
 					ui.label("Outline Thickness:")
 			with ui.column().classes("col-span-2"):
 				with ui.row().classes("items-center"):
+					slider_transpEoutline = ui.slider(min=5,max=100,step=5,value=100, on_change=lambda:update_textsample()).style("width:160px;")
+					ui.label().bind_text_from(slider_transpEoutline,"value")
+				with ui.row().classes("items-center"):
 					slider_sizeEoutline = ui.slider(min=1,max=10,value=2, on_change=lambda:update_textsample()).style("width:160px;")
 					ui.label().bind_text_from(slider_sizeEoutline,"value")
 			with ui.column().classes("col-span-2"):
+				with ui.row().classes("items-center"):
+					slider_transpJoutline = ui.slider(min=5,max=100,step=5,value=100, on_change=lambda:update_textsample()).style("width:160px;")
+					ui.label().bind_text_from(slider_transpJoutline,"value")
 				with ui.row().classes("items-center"):
 					slider_sizeJoutline = ui.slider(min=1,max=10,value=2, on_change=lambda:update_textsample()).style("width:160px;")
 					ui.label().bind_text_from(slider_sizeJoutline,"value")
@@ -2254,5 +2374,5 @@ ui.run() #comment out for building
 #ui.run(reload=False, port=native.find_open_port()) #comment in for building
 '''
 Build with
-<your python environment> nicegui-pack --onefile --icon ./icon/DDicon.png --name "DDsiggen_ver.<version number>" DDsiggen.py
+nicegui-pack --onefile --icon ./icon/DDicon.png --name "DDsiggen_ver.<version number>" DDsiggen.py
 '''
