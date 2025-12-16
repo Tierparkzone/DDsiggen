@@ -13,7 +13,7 @@ import requests
 #import imageio as iio
 
 #Version Number
-version_no = "1.16"
+version_no = "1.18"
 
 
 
@@ -108,7 +108,7 @@ def import_new(wait_dialog, import_mode):
 		I_new = []
 	for image in I_fullscale:
 		ImageOps.exif_transpose(image=image, in_place=True)
-		I_new.append(ImageOps.fit(image=image, size=[200,200], method=Image.Resampling.LANCZOS, centering=[0.5,0.0]))
+		I_new.append(ImageOps.fit(image=image, size=[photowidth,photoheight], method=Image.Resampling.LANCZOS, centering=[0.5,0.0]))
 
 	I_new_padnames()
 	new_ui_characterlist.refresh()
@@ -153,7 +153,7 @@ def image_from_url(image_url):
 		print("Extracting Image ...")
 		ImageOps.exif_transpose(image=new_image, in_place=True)
 		print("Transposing ...")
-		scaled_image = ImageOps.fit(image=new_image, size=[200,200], method=Image.Resampling.LANCZOS, centering=[0.5,0.0])
+		scaled_image = ImageOps.fit(image=new_image, size=[photowidth,photoheight], method=Image.Resampling.LANCZOS, centering=[0.5,0.0])
 		print("Rescaling ...")
 		return(scaled_image)
 
@@ -222,7 +222,7 @@ async def import_local():
 			namesE_undo = namesE.copy()
 			namesJ_undo = namesJ.copy()
 			ImageOps.exif_transpose(image=new_image, in_place=True)
-			scaled_image = ImageOps.fit(image=new_image, size=[200,200], method=Image.Resampling.LANCZOS, centering=[0.5,0.0])
+			scaled_image = ImageOps.fit(image=new_image, size=[photowidth,photoheight], method=Image.Resampling.LANCZOS, centering=[0.5,0.0])
 			I_new.append(scaled_image)
 			I_new_padnames()
 			new_undoable_flag = True
@@ -925,7 +925,7 @@ def generate_newlayout(image_layout, custom_columns, custom_rows):
 
 		nchar_img=math.ceil(nchar/new_layout_images)
 		new_layout_rows=1
-		while math.floor(550/math.ceil(nchar_img/new_layout_rows))<math.floor(200/(new_layout_rows+1)):
+		while math.floor(math.floor(550/math.ceil(nchar_img/new_layout_rows))/photoaspect)<math.floor(200/(new_layout_rows+1)):
 			new_layout_rows=new_layout_rows+1
 		new_layout_columns=math.ceil(nchar_img/new_layout_rows)
 
@@ -1038,13 +1038,13 @@ def new_combine_images(I_new_withtext):
 	i_char=0
 	i_images=0
 	while i_images<new_layout_images:
-		sig_image=Image.new("RGBA",(200*new_layout_columns,200*new_layout_rows),(0,0,0,0))
+		sig_image=Image.new("RGBA",(photowidth*new_layout_columns,photoheight*new_layout_rows),(0,0,0,0))
 		i_rows=0
 		while i_rows<new_layout_rows:
 			i_columns=0
 			while i_columns<new_layout_columns:
 				if i_char<n_char:
-					sig_image.paste(I_new_withtext[i_char],(200*i_columns,200*i_rows))
+					sig_image.paste(I_new_withtext[i_char],(photowidth*i_columns,photoheight*i_rows))
 					i_char=i_char+1
 				i_columns=i_columns+1
 			i_rows=i_rows+1
@@ -1064,7 +1064,9 @@ def applytext_I_new():
 	I_new_withtext=[]
 	while image_no<len(I_new):
 		textlayerE, textlayerJ = new_generate_textlayers(image_no)
-		image_withtext = new_generate_textimage(image_no,textlayerE,textlayerJ)
+		shadowEimage, shadowJimage = new_generate_textshadow(textlayerE,textlayerJ)
+		glowEimage, glowJimage = new_generate_textglow(textlayerE,textlayerJ)
+		image_withtext = new_generate_textimage(image_no,textlayerE,textlayerJ,shadowEimage, shadowJimage,glowEimage,glowJimage)
 		I_new_withtext.append(image_withtext)
 		image_no=image_no+1
 	return(I_new_withtext)
@@ -1108,13 +1110,111 @@ def sig_textcropper(textimage):
 		cropwidth = 50
 		print("Text layer is empty!")
 	textimage2 = textimage2.crop((0,0,cropwidth,cropheight))
-	if textimage2.size[0]>200 and new_handle_oversize.value=="Squish":
-		textimage2=textimage2.resize(size=(200,cropheight),resample=Image.Resampling.LANCZOS)
-	if textimage2.size[0]>200 and new_handle_oversize.value=="Shrink":
-		textimage2=ImageOps.contain(image=textimage2, size=[200,200], method=Image.Resampling.LANCZOS)
+	if textimage2.size[0]>photowidth and new_handle_oversize.value=="Squish":
+		textimage2=textimage2.resize(size=(photowidth,cropheight),resample=Image. Resampling.LANCZOS)
+	if textimage2.size[0]>photowidth and new_handle_oversize.value=="Shrink":
+		textimage2=ImageOps.contain(image=textimage2, size=[photowidth,photoheight], method=Image.Resampling.LANCZOS)
 	return(textimage2)
 
-def new_generate_textimage(image_no,textlayerE,textlayerJ):
+def new_generate_textshadow(textlayerE,textlayerJ):
+	shadowEimageBase = Image.new(mode="RGBA", size=[photowidth,photoheight], color="#00000000")
+	shadowEimage = Image.new(mode="RGBA", size=[photowidth,photoheight], color="#000000ff")
+	shadowJimageBase = Image.new(mode="RGBA", size=[photowidth,photoheight], color="#00000000")
+	shadowJimage = Image.new(mode="RGBA", size=[photowidth,photoheight], color="#000000ff")
+	if ISshadowE and textlayerE:
+		textlayerE_cropped = sig_textcropper(textlayerE)
+		if nameEalignX == "right":
+			nameEposX = photowidth-textlayerE_cropped.size[0]+nameEoffsetX+shadowEoffsetX
+		elif nameEalignX == "center":
+			nameEposX = math.floor(0.5*photowidth)-math.floor(textlayerE_cropped.size[0]*0.5)+nameEoffsetX+shadowEoffsetX
+		else:
+			nameEposX = 0+nameEoffsetX+shadowEoffsetX
+		if nameEalignY == "top":
+			nameEposY = 0-nameEoffsetY-shadowEoffsetY
+		elif nameEalignY == "center":
+			nameEposY = math.floor(0.5*photoheight)-math.floor(textlayerE_cropped.size[1]*0.5)-nameEoffsetY-shadowEoffsetY
+		else:
+			nameEposY = photoheight-textlayerE_cropped.size[1]-nameEoffsetY-shadowEoffsetY
+		shadowEimageBase.paste(textlayerE_cropped,(nameEposX,nameEposY), mask=textlayerE_cropped)
+		shadowEalpha = shadowEimageBase.split()[-1]
+		shadowEimage.putalpha(shadowEalpha)
+		if shadowEblur:
+			shadowEimage = shadowEimage.filter(ImageFilter.GaussianBlur(radius=shadowEblur))
+	else:
+		shadowEimage = []
+	if ISshadowJ and textlayerJ:
+		textlayerJ_cropped = sig_textcropper(textlayerJ)
+		if nameJalignX == "right":
+			nameJposX = photowidth-textlayerJ_cropped.size[0]+nameJoffsetX+shadowJoffsetX
+		elif nameJalignX == "center":
+			nameJposX = math.floor(0.5*photowidth)-math.floor(textlayerJ_cropped.size[0]*0.5)+nameJoffsetX+shadowJoffsetX
+		else:
+			nameJposX = 0+nameJoffsetX+shadowJoffsetX
+		if nameJalignY == "top":
+			nameJposY = 0-nameJoffsetY-shadowJoffsetY
+		elif nameJalignY == "center":
+			nameJposY = math.floor(0.5*photoheight)-math.floor(textlayerJ_cropped.size[1]*0.5)-nameJoffsetY-shadowJoffsetY
+		else:
+			nameJposY = photoheight-textlayerJ_cropped.size[1]-nameJoffsetY-shadowJoffsetY
+		shadowJimageBase.paste(textlayerJ_cropped,(nameJposX,nameJposY), mask=textlayerJ_cropped)
+		shadowJalpha = shadowJimageBase.split()[-1]
+		shadowJimage.putalpha(shadowJalpha)
+		if shadowJblur:
+			shadowJimage = shadowJimage.filter(ImageFilter.GaussianBlur(radius=shadowJblur))
+	else:
+		shadowJimage = []
+	return(shadowEimage,shadowJimage)
+
+def new_generate_textglow(textlayerE,textlayerJ):
+	glowEimageBase = Image.new(mode="RGBA", size=[photowidth,photoheight], color="#00000000")
+	glowEimage = Image.new(mode="RGBA", size=[photowidth,photoheight], color=colorEglow+"ff")
+	glowJimageBase = Image.new(mode="RGBA", size=[photowidth,photoheight], color="#00000000")
+	glowJimage = Image.new(mode="RGBA", size=[photowidth,photoheight], color=colorJglow+"ff")
+	if ISglowE and textlayerE:
+		textlayerE_cropped = sig_textcropper(textlayerE)
+		if nameEalignX == "right":
+			nameEposX = photowidth-textlayerE_cropped.size[0]+nameEoffsetX+glowEoffsetX
+		elif nameEalignX == "center":
+			nameEposX = math.floor(0.5*photowidth)-math.floor(textlayerE_cropped.size[0]*0.5)+nameEoffsetX+glowEoffsetX
+		else:
+			nameEposX = 0+nameEoffsetX+glowEoffsetX
+		if nameEalignY == "top":
+			nameEposY = 0-nameEoffsetY-glowEoffsetY
+		elif nameEalignY == "center":
+			nameEposY = math.floor(0.5*photoheight)-math.floor(textlayerE_cropped.size[1]*0.5)-nameEoffsetY-glowEoffsetY
+		else:
+			nameEposY = photoheight-textlayerE_cropped.size[1]-nameEoffsetY-glowEoffsetY
+		glowEimageBase.paste(textlayerE_cropped,(nameEposX,nameEposY), mask=textlayerE_cropped)
+		glowEalpha = glowEimageBase.split()[-1]
+		glowEimage.putalpha(glowEalpha)
+		if glowEblur:
+			glowEimage = glowEimage.filter(ImageFilter.GaussianBlur(radius=glowEblur))
+	else:
+		glowEimage = []
+	if ISglowJ and textlayerJ:
+		textlayerJ_cropped = sig_textcropper(textlayerJ)
+		if nameJalignX == "right":
+			nameJposX = photowidth-textlayerJ_cropped.size[0]+nameJoffsetX+glowJoffsetX
+		elif nameJalignX == "center":
+			nameJposX = math.floor(0.5*photowidth)-math.floor(textlayerJ_cropped.size[0]*0.5)+nameJoffsetX+glowJoffsetX
+		else:
+			nameJposX = 0+nameJoffsetX+glowJoffsetX
+		if nameJalignY == "top":
+			nameJposY = 0-nameJoffsetY-glowJoffsetY
+		elif nameJalignY == "center":
+			nameJposY = math.floor(0.5*photoheight)-math.floor(textlayerJ_cropped.size[1]*0.5)-nameJoffsetY-glowJoffsetY
+		else:
+			nameJposY = photoheight-textlayerJ_cropped.size[1]-nameJoffsetY-glowJoffsetY
+		glowJimageBase.paste(textlayerJ_cropped,(nameJposX,nameJposY), mask=textlayerJ_cropped)
+		glowJalpha = glowJimageBase.split()[-1]
+		glowJimage.putalpha(glowJalpha)
+		if glowJblur:
+			glowJimage = glowJimage.filter(ImageFilter.GaussianBlur(radius=glowJblur))
+	else:
+		glowJimage = []
+	return(glowEimage,glowJimage)
+
+def new_generate_textimage(image_no,textlayerE,textlayerJ,shadowEimage,shadowJimage, glowEimage,glowJimage):
 	try:
 		I_new[image_no]
 	except:
@@ -1126,43 +1226,65 @@ def new_generate_textimage(image_no,textlayerE,textlayerJ):
 		textimage.putalpha(new_alphamask)
 		if fontE.value and textlayerE:
 			textlayerE_cropped = sig_textcropper(textlayerE)
+			textEimageBase = Image.new(mode="RGBA", size=[photowidth,photoheight], color="#00000000")
 			if nameEalignX == "right":
-				nameEposX = 200-textlayerE_cropped.size[0]+nameEoffsetX
+				nameEposX = photowidth-textlayerE_cropped.size[0]+nameEoffsetX
 			elif nameEalignX == "center":
-				nameEposX = 100-math.floor(textlayerE_cropped.size[0]*0.5)+nameEoffsetX
+				nameEposX = math.floor(0.5*photowidth)-math.floor(textlayerE_cropped.size[0]*0.5)+nameEoffsetX
 			else:
 				nameEposX = 0+nameEoffsetX
 			if nameEalignY == "top":
 				nameEposY = 0-nameEoffsetY
 			elif nameEalignY == "center":
-				nameEposY = 100-math.floor(textlayerE_cropped.size[1]*0.5)-nameEoffsetY
+				nameEposY = math.floor(0.5*photoheight)-math.floor(textlayerE_cropped.size[1]*0.5)-nameEoffsetY
 			else:
-				nameEposY = 200-textlayerE_cropped.size[1]-nameEoffsetY
+				nameEposY = photoheight-textlayerE_cropped.size[1]-nameEoffsetY
 		if fontJ.value and textlayerJ:
 			textlayerJ_cropped = sig_textcropper(textlayerJ)
+			textJimageBase = Image.new(mode="RGBA", size=[photowidth,photoheight], color="#00000000")
 			if nameJalignX == "right":
-				nameJposX = 200-textlayerJ_cropped.size[0]+nameJoffsetX
+				nameJposX = photowidth-textlayerJ_cropped.size[0]+nameJoffsetX
 			elif nameJalignX == "center":
-				nameJposX = 100-math.floor(textlayerJ_cropped.size[0]*0.5)+nameJoffsetX
+				nameJposX = math.floor(0.5*photowidth)-math.floor(textlayerJ_cropped.size[0]*0.5)+nameJoffsetX
 			else:
 				nameJposX = 0+nameJoffsetX
 			if nameJalignY == "top":
 				nameJposY = 0-nameJoffsetY
 			elif nameJalignY == "center":
-				nameJposY = 100-math.floor(textlayerJ_cropped.size[1]*0.5)-nameJoffsetY
+				nameJposY = math.floor(0.5*photoheight)-math.floor(textlayerJ_cropped.size[1]*0.5)-nameJoffsetY
 			else:
-				nameJposY = 200-textlayerJ_cropped.size[1]-nameJoffsetY
+				nameJposY = photoheight-textlayerJ_cropped.size[1]-nameJoffsetY
 
 		if names_priority.value == "Name":
 			if fontJ.value and textlayerJ:
-				textimage.paste(textlayerJ_cropped,(nameJposX,nameJposY), mask=textlayerJ_cropped)
+				if ISshadowJ:
+					textimage = Image.alpha_composite(textimage,shadowJimage)
+				if ISglowJ:
+					textimage = Image.alpha_composite(textimage,glowJimage)
+				textJimageBase.paste(textlayerJ_cropped,(nameJposX,nameJposY), mask=textlayerJ_cropped)
+				textimage = Image.alpha_composite(textimage,textJimageBase)
 			if fontE.value and textlayerE:
-				textimage.paste(textlayerE_cropped,(nameEposX,nameEposY), mask=textlayerE_cropped)
+				if ISshadowE:
+					textimage = Image.alpha_composite(textimage,shadowEimage)
+				if ISglowE:
+					textimage = Image.alpha_composite(textimage,glowEimage)
+				textEimageBase.paste(textlayerE_cropped,(nameEposX,nameEposY), mask=textlayerE_cropped)
+				textimage = Image.alpha_composite(textimage,textEimageBase)
 		elif names_priority.value == "Epithet":
 			if fontE.value and textlayerE:
-				textimage.paste(textlayerE_cropped,(nameEposX,nameEposY), mask=textlayerE_cropped)
+				if ISshadowE:
+					textimage = Image.alpha_composite(textimage,shadowEimage)
+				if ISglowE:
+					textimage = Image.alpha_composite(textimage,glowEimage)
+				textEimageBase.paste(textlayerE_cropped,(nameEposX,nameEposY), mask=textlayerE_cropped)
+				textimage = Image.alpha_composite(textimage,textEimageBase)
 			if fontJ.value and textlayerJ:
-				textimage.paste(textlayerJ_cropped,(nameJposX,nameJposY), mask=textlayerJ_cropped)
+				if ISshadowJ:
+					textimage = Image.alpha_composite(textimage,shadowJimage)
+				if ISglowJ:
+					textimage = Image.alpha_composite(textimage,glowJimage)
+				textJimageBase.paste(textlayerJ_cropped,(nameJposX,nameJposY), mask=textlayerJ_cropped)
+				textimage = Image.alpha_composite(textimage,textJimageBase)
 		else:
 			print("Error: Check text layer priority!")
 	return(textimage)
@@ -1199,7 +1321,97 @@ def save_newsig_single():
 	ui.notify(f"{i_image-1} individual images saved in 'signatures'.")
 
 
+
+# Create Alpha-Masks
+
+def draw_amasks():
+
+	global aMask_circle
+	global aMask_blrcir
+	global aMask_square
+	global aMask_sqedge
+	global aMask_blrsqr
+	global aMask_rndrec
+	global aMask_blrdrc
+	global aMask_skdrec
+	global aMask_blskrc
+
+	aMask_circle = Image.new(mode="L", size=[3*photowidth,3*photoheight], color=0)
+	ImageDraw.Draw(aMask_circle).ellipse(xy=[(4,4),(3*photowidth-5,3*photoheight-5)], fill=255)
+	aMask_circle = ImageOps.contain(image=aMask_circle, size=[photowidth,photoheight], method=Image.Resampling.LANCZOS)
+
+	aMask_blrcir = Image.new(mode="L", size=[3*photowidth,3*photoheight], color=0)
+	ImageDraw.Draw(aMask_blrcir).ellipse(xy=[(23,23),(3*photowidth-24,3*photoheight-24)], fill=255)
+	aMask_blrcir = aMask_blrcir.filter(ImageFilter.GaussianBlur(radius=12.0))
+	aMask_blrcir = ImageOps.contain(image=aMask_blrcir, size=[photowidth,photoheight], method=Image.Resampling.LANCZOS)
+
+	aMask_square = Image.new(mode="L", size=[photowidth,photoheight], color=255)
+
+	aMask_sqedge = Image.new(mode="L", size=[photowidth,photoheight], color=0)
+	ImageDraw.Draw(aMask_sqedge).rectangle(xy=[(4,4),(photowidth-5,photoheight-5)], fill=255)
+
+	aMask_blrsqr = Image.new(mode="L", size=[3*photowidth,3*photoheight], color=0)
+	ImageDraw.Draw(aMask_blrsqr).rectangle(xy=[(23,23),(3*photowidth-24,3*photoheight-24)], fill=255)
+	aMask_blrsqr = aMask_blrsqr.filter(ImageFilter.GaussianBlur(radius=12.0))
+	aMask_blrsqr = ImageOps.contain(image=aMask_blrsqr, size=[photowidth,photoheight], method=Image.Resampling.LANCZOS)
+
+	aMask_rndrec = Image.new(mode="L", size=[3*photowidth,3*photoheight], color=0)
+	ImageDraw.Draw(aMask_rndrec).rounded_rectangle(xy=[(9,9),(3*photowidth-10,3*photoheight-10)], radius=60, fill=255)
+	aMask_rndrec = ImageOps.contain(image=aMask_rndrec, size=[photowidth,photoheight], method=Image.Resampling.LANCZOS)
+
+	aMask_blrdrc = Image.new(mode="L", size=[3*photowidth,3*photoheight], color=0)
+	ImageDraw.Draw(aMask_blrdrc).rounded_rectangle(xy=[(23,23),(3*photowidth-24,3*photoheight-24)], radius=60, fill=255)
+	aMask_blrdrc = aMask_blrdrc.filter(ImageFilter.GaussianBlur(radius=12.0))
+	aMask_blrdrc = ImageOps.contain(image=aMask_blrdrc, size=[photowidth,photoheight], method=Image.Resampling.LANCZOS)
+
+	aMask_skdrec = Image.new(mode="L", size=[3*photowidth,3*photoheight], color=0)
+	ImageDraw.Draw(aMask_skdrec).rounded_rectangle(xy=[(0,9),(3*photowidth-61,3*photoheight-10)], radius=60, fill=255)
+	aMask_skdrec = aMask_skdrec.transform(aMask_skdrec.size,Image.AFFINE,(1,0.1,-60,0,1,0),resample=Image.Resampling.BICUBIC)
+	aMask_skdrec = ImageOps.contain(image=aMask_skdrec, size=[photowidth,photoheight], method=Image.Resampling.LANCZOS)
+
+	aMask_blskrc = Image.new(mode="L", size=[3*photowidth,3*photoheight], color=0)
+	ImageDraw.Draw(aMask_blskrc).rounded_rectangle(xy=[(13,23),(3*photowidth-74,3*photoheight-24)], radius=60, fill=255)
+	aMask_blskrc = aMask_blskrc.transform(aMask_blskrc.size,Image.AFFINE,(1,0.1,-60,0,1,0),resample=Image.Resampling.BICUBIC)
+	aMask_blskrc = aMask_blskrc.filter(ImageFilter.GaussianBlur(radius=12.0))
+	aMask_blskrc = ImageOps.contain(image=aMask_blskrc, size=[photowidth,photoheight], method=Image.Resampling.LANCZOS)
+
+
+
+
 #Extra Functionality
+
+async def adjustaspect(newaspect):
+	global photowidth
+	global photoaspect
+	global I_new
+	global new_undoable_flag
+	global new_updated_flag
+
+	with ui.dialog().props("persistent") as change_aspect_dialog, ui.card():
+		ui.label("All entries in the photo column will be cleared. This cannot be undone!").style("max-width:300px;")
+		with ui.row():
+			ui.button("Change Aspect Ratio",on_click=lambda: change_aspect_dialog.submit(False)).style("width:200px;")
+			ui.button("Cancel",on_click=lambda: change_aspect_dialog.submit(True)).props("color=positive").style("width:200px;")
+
+	if I_new:
+		is_abort = await change_aspect_dialog
+	else:
+		is_abort = False
+	if is_abort:
+		return
+	photoaspect = newaspect
+	photowidth = math.floor(photoheight*photoaspect)
+	I_new = []
+	I_new_reducenames()
+	draw_amasks()
+	set_new_alphamask(aMask_circle)
+	update_imagesample()
+	new_undoable_flag = False
+	new_updated_flag =False
+	new_ui_characterlist.refresh()
+	new_button_undoDisplay.refresh()
+	new_ui_siglayout.refresh()
+
 
 def quick_update_buttons():
 	quick_button_undoDisplay.refresh()
@@ -1246,11 +1458,37 @@ def update_imagesample():
 	global nameEoffsetY
 	global nameJoffsetX
 	global nameJoffsetY
+	global shadowEoffsetX
+	global shadowEoffsetY
+	global shadowJoffsetX
+	global shadowJoffsetY
+	global shadowEblur
+	global shadowJblur
+	global glowEoffsetX
+	global glowEoffsetY
+	global glowJoffsetX
+	global glowJoffsetY
+	global glowEblur
+	global glowJblur
 	nameEoffsetX = slider_nameEoffsetx.value
 	nameEoffsetY = slider_nameEoffsety.value
 	nameJoffsetX = slider_nameJoffsetx.value
 	nameJoffsetY = slider_nameJoffsety.value
-	imagesample = new_generate_textimage(textsample_no-1,sampleE,sampleJ)
+	shadowEoffsetX = slider_shadowEoffsetX.value
+	shadowEoffsetY = slider_shadowEoffsetY.value
+	shadowJoffsetX = slider_shadowJoffsetX.value
+	shadowJoffsetY = slider_shadowJoffsetY.value
+	shadowEblur = slider_shadowEblur.value
+	shadowJblur = slider_shadowJblur.value
+	glowEoffsetX = slider_glowEoffsetX.value
+	glowEoffsetY = slider_glowEoffsetY.value
+	glowJoffsetX = slider_glowJoffsetX.value
+	glowJoffsetY = slider_glowJoffsetY.value
+	glowEblur = slider_glowEblur.value
+	glowJblur = slider_glowJblur.value
+	sampleEshadow, sampleJshadow = new_generate_textshadow(sampleE,sampleJ)
+	sampleEglow, sampleJglow = new_generate_textglow(sampleE,sampleJ)
+	imagesample = new_generate_textimage(textsample_no-1,sampleE,sampleJ,sampleEshadow, sampleJshadow,sampleEglow,sampleJglow)
 	new_ui_imageSample.refresh()
 
 
@@ -1278,6 +1516,9 @@ new_undoable_flag = False
 new_generated_flag = False
 new_table_index = []
 
+photoheight = 200
+photowidth = 200
+photoaspect = 1.0
 select_alphamask = "circle"
 
 namesE = []
@@ -1331,52 +1572,41 @@ nameJalignY = "bottom"
 nameJoffsetX = 0
 nameJoffsetY = 0
 
+ISshadowE = False
+ISshadowJ = False
+shadowEblur = 2
+shadowJblur = 2
+ISglowE = False
+ISglowJ = False
+glowEblur = 2
+glowJblur = 2
+colorEglow = "#ffffff"
+colorJglow = "#ffffff"
+
+aMask_circle = []
+aMask_blrcir = []
+aMask_square = []
+aMask_sqedge = []
+aMask_blrsqr = []
+aMask_rndrec = []
+aMask_blrdrc = []
+aMask_skdrec = []
+aMask_blskrc = []
+
+
 # Import local files
 scan_fonts()
-
-
-# Create Alpha-Masks
-
-aMask_circle = Image.new(mode="L", size=[600,600], color=0)
-ImageDraw.Draw(aMask_circle).ellipse(xy=[(4,4),(595,595)], fill=255)
-aMask_circle = ImageOps.contain(image=aMask_circle, size=[200,200], method=Image.Resampling.LANCZOS)
-
-aMask_blrcir = Image.new(mode="L", size=[600,600], color=0)
-ImageDraw.Draw(aMask_blrcir).ellipse(xy=[(23,23),(576,576)], fill=255)
-aMask_blrcir = aMask_blrcir.filter(ImageFilter.GaussianBlur(radius=12.0))
-aMask_blrcir = ImageOps.contain(image=aMask_blrcir, size=[200,200], method=Image.Resampling.LANCZOS)
-
-aMask_square = Image.new(mode="L", size=[200,200], color=255)
-
-aMask_sqedge = Image.new(mode="L", size=[200,200], color=0)
-ImageDraw.Draw(aMask_sqedge).rectangle(xy=[(4,4),(195,195)], fill=255)
-
-aMask_blrsqr = Image.new(mode="L", size=[600,600], color=0)
-ImageDraw.Draw(aMask_blrsqr).rectangle(xy=[(23,23),(576,576)], fill=255)
-aMask_blrsqr = aMask_blrsqr.filter(ImageFilter.GaussianBlur(radius=12.0))
-aMask_blrsqr = ImageOps.contain(image=aMask_blrsqr, size=[200,200], method=Image.Resampling.LANCZOS)
-
-aMask_rndrec = Image.new(mode="L", size=[600,600], color=0)
-ImageDraw.Draw(aMask_rndrec).rounded_rectangle(xy=[(9,9),(590,590)], radius=60, fill=255)
-aMask_rndrec = ImageOps.contain(image=aMask_rndrec, size=[200,200], method=Image.Resampling.LANCZOS)
-
-aMask_blrdrc = Image.new(mode="L", size=[600,600], color=0)
-ImageDraw.Draw(aMask_blrdrc).rounded_rectangle(xy=[(23,23),(576,576)], radius=60, fill=255)
-aMask_blrdrc = aMask_blrdrc.filter(ImageFilter.GaussianBlur(radius=12.0))
-aMask_blrdrc = ImageOps.contain(image=aMask_blrdrc, size=[200,200], method=Image.Resampling.LANCZOS)
-
-aMask_skdrec = Image.new(mode="L", size=[600,600], color=0)
-ImageDraw.Draw(aMask_skdrec).rounded_rectangle(xy=[(0,9),(539,590)], radius=60, fill=255)
-aMask_skdrec = aMask_skdrec.transform(aMask_skdrec.size,Image.AFFINE,(1,0.1,-60,0,1,0),resample=Image.Resampling.BICUBIC)
-aMask_skdrec = ImageOps.contain(image=aMask_skdrec, size=[200,200], method=Image.Resampling.LANCZOS)
-
-aMask_blskrc = Image.new(mode="L", size=[600,600], color=0)
-ImageDraw.Draw(aMask_blskrc).rounded_rectangle(xy=[(13,23),(526,576)], radius=60, fill=255)
-aMask_blskrc = aMask_blskrc.transform(aMask_blskrc.size,Image.AFFINE,(1,0.1,-60,0,1,0),resample=Image.Resampling.BICUBIC)
-aMask_blskrc = aMask_blskrc.filter(ImageFilter.GaussianBlur(radius=12.0))
-aMask_blskrc = ImageOps.contain(image=aMask_blskrc, size=[200,200], method=Image.Resampling.LANCZOS)
-
-aMask_select = aMask_circle
+draw_amasks()
+aMasq_circle = aMask_circle.copy()
+aMasq_blrcir = aMask_blrcir.copy()
+aMasq_square = aMask_square.copy()
+aMasq_sqedge = aMask_sqedge.copy()
+aMasq_blrsqr = aMask_blrsqr.copy()
+aMasq_rndrec = aMask_rndrec.copy()
+aMasq_blrdrc = aMask_blrdrc.copy()
+aMasq_skdrec = aMask_skdrec.copy()
+aMasq_blskrc = aMask_blskrc.copy()
+aMask_select = aMasq_circle
 new_alphamask = aMask_circle
 
 # Image to indicate padding 
@@ -1581,55 +1811,55 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 
 					if select_alphamask=="circle":
 						button_AMcircle.props("color=primary")
-						aMask_select=aMask_circle
+						aMask_select=aMasq_circle
 						#ui.notify("Selected circle")
 					else:
 						button_AMcircle.props("color=positive")
 					if select_alphamask=="blrcir":
 						button_AMblrcir.props("color=primary")
-						aMask_select=aMask_blrcir
+						aMask_select=aMasq_blrcir
 						#ui.notify("Selected circle (blurred)")
 					else:
 						button_AMblrcir.props("color=positive")
 					if select_alphamask=="square":
 						button_AMsquare.props("color=primary")
-						aMask_select=aMask_square
+						aMask_select=aMasq_square
 						#ui.notify("Selected square (touching)")
 					else:
 						button_AMsquare.props("color=positive")
 					if select_alphamask=="sqedge":
 						button_AMsqedge.props("color=primary")
-						aMask_select=aMask_sqedge
+						aMask_select=aMasq_sqedge
 						#ui.notify("Selected square (touching)")
 					else:
 						button_AMsqedge.props("color=positive")
 					if select_alphamask=="blrsqr":
 						button_AMblrsqr.props("color=primary")
-						aMask_select=aMask_blrsqr
+						aMask_select=aMasq_blrsqr
 						#ui.notify("Selected square (blurred)")
 					else:
 						button_AMblrsqr.props("color=positive")
 					if select_alphamask=="rndrec":
 						button_AMrndrec.props("color=primary")
-						aMask_select=aMask_rndrec
+						aMask_select=aMasq_rndrec
 						#ui.notify("Selected rounded square")
 					else:
 						button_AMrndrec.props("color=positive")
 					if select_alphamask=="blrdrc":
 						button_AMblrdrc.props("color=primary")
-						aMask_select=aMask_blrdrc
+						aMask_select=aMasq_blrdrc
 						#ui.notify("Selected rounded square (blurred)")
 					else:
 						button_AMblrdrc.props("color=positive")
 					if select_alphamask=="skdrec":
 						button_AMskdrec.props("color=primary")
-						aMask_select=aMask_skdrec
+						aMask_select=aMasq_skdrec
 						#ui.notify("Selected skewed rectangle")
 					else:
 						button_AMskdrec.props("color=positive")
 					if select_alphamask=="blskrc":
 						button_AMblskrc.props("color=primary")
-						aMask_select=aMask_blskrc
+						aMask_select=aMasq_blskrc
 						#ui.notify("Selected skewed rectangle (blurred)")
 					else:
 						button_AMblskrc.props("color=positive")
@@ -1646,23 +1876,23 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 					button_AMblskrc = ui.button(on_click=lambda:AMset("blskrc")).style("width:200px; height:200px;")
 
 				with button_AMcircle:
-					ui.image(aMask_circle).props(f"width=170px height=170px")
+					ui.image(aMasq_circle).props(f"width=170px height=170px")
 				with button_AMblrcir:
-					ui.image(aMask_blrcir).props(f"width=170px height=170px")
+					ui.image(aMasq_blrcir).props(f"width=170px height=170px")
 				with button_AMsquare:
-					ui.image(aMask_square).props(f"width=170px height=170px")
+					ui.image(aMasq_square).props(f"width=170px height=170px")
 				with button_AMsqedge:
-					ui.image(aMask_sqedge).props(f"width=170px height=170px")
+					ui.image(aMasq_sqedge).props(f"width=170px height=170px")
 				with button_AMblrsqr:
-					ui.image(aMask_blrsqr).props(f"width=170px height=170px")
+					ui.image(aMasq_blrsqr).props(f"width=170px height=170px")
 				with button_AMrndrec:
-					ui.image(aMask_rndrec).props(f"width=170px height=170px")
+					ui.image(aMasq_rndrec).props(f"width=170px height=170px")
 				with button_AMblrdrc:
-					ui.image(aMask_blrdrc).props(f"width=170px height=170px")
+					ui.image(aMasq_blrdrc).props(f"width=170px height=170px")
 				with button_AMskdrec:
-					ui.image(aMask_skdrec).props(f"width=170px height=170px")
+					ui.image(aMasq_skdrec).props(f"width=170px height=170px")
 				with button_AMblskrc:
-					ui.image(aMask_blskrc).props(f"width=170px height=170px")
+					ui.image(aMasq_blskrc).props(f"width=170px height=170px")
 				update_AMbuttons()				
 				
 
@@ -1700,6 +1930,14 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 		
 	with ui.tab_panel("Create New"):
 		ui.label("GENERATE A NEW SIGNATURE FROM SCRATCH.")
+
+		ui.label("First, select the aspect ratio in which your photos will be included in the signature images. If you change this later on, ALL PREVIOUSLY IMPORTED IMAGES WILL BE REMOVED!").style("max-width:550px;")
+
+		with ui.row().classes("items-center"):
+			select_photoaspect = ui.select([0.5,0.67,0.75,1,1.33,1.5], value=1)
+			ui.button("Set Aspect Ratio", on_click=lambda: adjustaspect(select_photoaspect.value), color="secondary").style("width:200px;")
+
+		ui.separator()
 
 		ui.label("You can load photos into the table below and import or apply custom text on top. Use the '?' buttons next to some options to see more details about how to use them. You can only undo your most recent action.").style("max-width:550px;")
 
@@ -1821,7 +2059,7 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 
 					#buttons to move images
 					if len(I_new)>new_id:
-						ui.image(I_new[new_id]).props(f"width=150px height=150px")
+						ui.image(I_new[new_id]).props(f"width={min(150,photowidth)}px")
 						with ui.column().classes("items-center gap-0"):
 							if new_id<1:
 								ui.button(icon="o_expand_less", color="accent").style("width:35px; height:30px;").props("disable")
@@ -1939,6 +2177,16 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 			colorJoutline=colorJoutline_new
 			update_textsample()
 
+		def set_colorEglow(colorEglow_new):
+			global colorEglow
+			colorEglow=colorEglow_new
+			update_textsample()
+
+		def set_colorJglow(colorJglow_new):
+			global colorJglow
+			colorJglow=colorJglow_new
+			update_textsample()
+
 		ui.separator()
 
 		ui.label("Chose what appearance the individual photos should have in your signature. (Black areas will become transparent.)").style("max-width:550px;")
@@ -1988,23 +2236,23 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 
 		with ui.row(wrap=True):
 			with ui.button(on_click=lambda: set_new_alphamask(aMask_circle)).style("width:200px; height:200px;") as button_new_AMcircle:
-				ui.image(aMask_circle).props("width=170px height=170px")
+				ui.image(aMasq_circle).props("width=170px height=170px")
 			with ui.button(on_click=lambda: set_new_alphamask(aMask_blrcir)).style("width:200px; height:200px;").props("color=positive") as button_new_AMblrcir:
-				ui.image(aMask_blrcir).props("width=170px height=170px")
+				ui.image(aMasq_blrcir).props("width=170px height=170px")
 			with ui.button(on_click=lambda: set_new_alphamask(aMask_square)).style("width:200px; height:200px;").props("color=positive") as button_new_AMsquare:
-				ui.image(aMask_square).props("width=170px height=170px")
+				ui.image(aMasq_square).props("width=170px height=170px")
 			with ui.button(on_click=lambda: set_new_alphamask(aMask_sqedge)).style("width:200px; height:200px;").props("color=positive") as button_new_AMsqedge:
-				ui.image(aMask_sqedge).props("width=170px height=170px")
+				ui.image(aMasq_sqedge).props("width=170px height=170px")
 			with ui.button(on_click=lambda: set_new_alphamask(aMask_blrsqr)).style("width:200px; height:200px;").props("color=positive") as button_new_AMblrsqr:
-				ui.image(aMask_blrsqr).props("width=170px height=170px")
+				ui.image(aMasq_blrsqr).props("width=170px height=170px")
 			with ui.button(on_click=lambda: set_new_alphamask(aMask_rndrec)).style("width:200px; height:200px;").props("color=positive") as button_new_AMrndrec:
-				ui.image(aMask_rndrec).props("width=170px height=170px")
+				ui.image(aMasq_rndrec).props("width=170px height=170px")
 			with ui.button(on_click=lambda: set_new_alphamask(aMask_blrdrc)).style("width:200px; height:200px;").props("color=positive") as button_new_AMblrdrc:
-				ui.image(aMask_blrdrc).props("width=170px height=170px")
+				ui.image(aMasq_blrdrc).props("width=170px height=170px")
 			with ui.button(on_click=lambda: set_new_alphamask(aMask_skdrec)).style("width:200px; height:200px;").props("color=positive") as button_new_AMskdrec:
-				ui.image(aMask_skdrec).props("width=170px height=170px")
+				ui.image(aMasq_skdrec).props("width=170px height=170px")
 			with ui.button(on_click=lambda: set_new_alphamask(aMask_blskrc)).style("width:200px; height:200px;").props("color=positive") as button_new_AMblskrc:
-				ui.image(aMask_blskrc).props("width=170px height=170px")
+				ui.image(aMasq_blskrc).props("width=170px height=170px")
 
 
 		ui.separator()
@@ -2116,9 +2364,9 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 		@ui.refreshable
 		def new_ui_imageSample() -> None:
 			if imagesample:
-				ui.image(imagesample).props(f"width={200}px height={200}px").classes("col-span-2").props("no-transition no spinner")
+				ui.image(imagesample).props(f"width={photowidth}px height={photoheight}px no-transition no spinner")
 			else:
-				ui.label("No preview image").classes("col-span-2")
+				ui.label("No preview image")
 
 		def set_nameEalign(positionX,positionY):
 			global nameEalignX
@@ -2142,6 +2390,26 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 			nameJalignY = positionY
 			update_imagesample()
 
+		def set_nameEshadow(ISshadow):
+			global ISshadowE
+			ISshadowE=ISshadow
+			update_imagesample()
+
+		def set_nameJshadow(ISshadow):
+			global ISshadowJ
+			ISshadowJ=ISshadow
+			update_imagesample()
+
+		def set_nameEglow(ISglow):
+			global ISglowE
+			ISglowE=ISglow
+			update_imagesample()
+
+		def set_nameJglow(ISglow):
+			global ISglowJ
+			ISglowJ=ISglow
+			update_imagesample()
+
 		@ui.refreshable
 		def new_ui_fontSamples() -> None:
 			global select_textsample_no
@@ -2153,15 +2421,13 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 						select_textsample_no = ui.select(new_table_index, value=textsample_no, on_change=lambda:update_textsample())
 					else:
 						select_textsample_no = ui.select([1], value=1).props("disable")
-					ui.element("spacer").style("height:80px;")
-					ui.label("How to handle oversized text?")
 				if fontE.value and namesE[textsample_no-1]:
 					with ui.column().classes("col-span-2 gap-0"):
 						ui.label("Sample:")
 						sampleE2 = sampleE.copy()
 						cropheight = sampleE2.size[1]
-						sampleE2 = sampleE2.crop((0,0,200,cropheight))
-						ui.image(sampleE2).props(f"width={200}px height={sampleE2.size[1]}px no-transition no spinner")
+						sampleE2 = sampleE2.crop((0,0,photowidth,cropheight))
+						ui.image(sampleE2).props(f"width={photowidth}px height={sampleE2.size[1]}px no-transition no spinner")
 				else:
 					ui.label(" ").classes("col-span-2")
 				if fontJ.value and namesJ[textsample_no-1]:
@@ -2169,17 +2435,17 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 						ui.label("Sample:")
 						sampleJ2 = sampleJ.copy()
 						cropheight = sampleJ2.size[1]
-						sampleJ2 = sampleJ2.crop((0,0,200,cropheight))
-						ui.image(sampleJ2).props(f"width={200}px height={sampleJ2.size[1]}px no-transition no spinner")
+						sampleJ2 = sampleJ2.crop((0,0,photowidth,cropheight))
+						ui.image(sampleJ2).props(f"width={photowidth}px height={sampleJ2.size[1]}px no-transition no spinner")
 				else:
 					ui.label(" ").classes("col-span-2")
 				ui.label(" ")
 
 		new_ui_fontSamples()
 		with ui.row():
-			ui.element("spacer").style("width:50px;")
-			new_handle_oversize = ui.radio(["Squish", "Shrink", "Ignore (Crop)"], value="Squish", on_change=lambda:update_textsample()).props("inline")
-		
+			ui.element("spacer").style("width:65px;")
+			new_ui_imageSample()
+
 		def new_reset_offset():
 			slider_nameEoffsetx.value=0
 			slider_nameEoffsety.value=0
@@ -2189,7 +2455,9 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 		
 		with ui.grid(columns = "50px 160px 35px 160px 35px 160px 35px 50px").classes("items-center"):
 			ui.label(" ")
-			new_ui_imageSample()
+			with ui.column().classes("col-span-2"):
+				ui.label("How to handle oversized text?")
+				new_handle_oversize = ui.radio(["Squish", "Shrink", "Ignore (Crop)"], value="Squish", on_change=lambda:update_textsample())
 			with ui.column().classes("gap-0"):
 				ui.label("Set alignment for Name")
 				ui.element("spacer").style("height:5px;")
@@ -2253,7 +2521,72 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 			ui.label().bind_text_from(slider_nameJoffsetx,'value')
 			with ui.button(icon="o_replay", on_click=lambda: new_reset_offset(), color="secondary").style("width:35px; height:35px;"):
 				ui.tooltip("Reset offset to zero").props("max-width='200px'").classes("default_tooltip")
-
+			with ui.column().classes("col-span-3"):
+				ui.label("")
+			with ui.column().classes("col-span-2"):
+				check_textEshadow = ui.checkbox("Name Shadow",on_change=lambda e:set_nameEshadow(e.value))
+			with ui.column().classes("col-span-2"):
+				check_textJshadow = ui.checkbox("Epithet Shadow",on_change=lambda e:set_nameJshadow(e.value))
+			ui.label("")
+			ui.label("")
+			with ui.column().classes("col-span-2"):
+				ui.label("Shadow Offset (Horizontal):")
+			slider_shadowEoffsetX = ui.slider(min=-8,max=8,value=2, on_change=lambda:update_imagesample())
+			ui.label().bind_text_from(slider_shadowEoffsetX,'value')
+			slider_shadowJoffsetX = ui.slider(min=-8,max=8,value=2, on_change=lambda:update_imagesample())
+			ui.label().bind_text_from(slider_shadowJoffsetX,'value')
+			ui.label("")
+			ui.label("")
+			with ui.column().classes("col-span-2"):
+				ui.label("Shadow Offset (Vertical):")
+			slider_shadowEoffsetY = ui.slider(min=-8,max=8,value=-2, on_change=lambda:update_imagesample())
+			ui.label().bind_text_from(slider_shadowEoffsetY,'value')
+			slider_shadowJoffsetY = ui.slider(min=-8,max=8,value=-2, on_change=lambda:update_imagesample())
+			ui.label().bind_text_from(slider_shadowJoffsetY,'value')
+			ui.label("")
+			ui.label("")
+			with ui.column().classes("col-span-2"):
+				ui.label("Shadow Blur:")
+			slider_shadowEblur = ui.slider(min=0,max=8,value=2, on_change=lambda:update_imagesample())
+			ui.label().bind_text_from(slider_shadowEblur,'value')
+			slider_shadowJblur = ui.slider(min=0,max=8,value=2, on_change=lambda:update_imagesample())
+			ui.label().bind_text_from(slider_shadowJblur,'value')
+			ui.label("")
+			with ui.column().classes("col-span-3"):
+				ui.label("")
+			check_textEglow = ui.checkbox("Name Glow",on_change=lambda e:set_nameEglow(e.value))
+			with ui.button(icon="o_format_color_fill"):
+				ui.color_picker(on_pick=lambda e: set_colorEglow(e.color))
+				ui.tooltip("Name Glow Color").classes("default_tooltip")
+			check_textJglow = ui.checkbox("Epithet Glow",on_change=lambda e:set_nameJglow(e.value))
+			with ui.button(icon="o_format_color_fill"):
+				ui.color_picker(on_pick=lambda e: set_colorJglow(e.color))
+				ui.tooltip("Epithet Glow Color").classes("default_tooltip")
+			ui.label("")
+			ui.label("")
+			with ui.column().classes("col-span-2"):
+				ui.label("Glow Offset (Horizontal):")
+			slider_glowEoffsetX = ui.slider(min=-8,max=8,value=-1, on_change=lambda:update_imagesample())
+			ui.label().bind_text_from(slider_glowEoffsetX,'value')
+			slider_glowJoffsetX = ui.slider(min=-8,max=8,value=-1, on_change=lambda:update_imagesample())
+			ui.label().bind_text_from(slider_glowJoffsetX,'value')
+			ui.label("")
+			ui.label("")
+			with ui.column().classes("col-span-2"):
+				ui.label("Glow Offset (Vertical):")
+			slider_glowEoffsetY = ui.slider(min=-8,max=8,value=1, on_change=lambda:update_imagesample())
+			ui.label().bind_text_from(slider_glowEoffsetY,'value')
+			slider_glowJoffsetY = ui.slider(min=-8,max=8,value=1, on_change=lambda:update_imagesample())
+			ui.label().bind_text_from(slider_glowJoffsetY,'value')
+			ui.label("")
+			ui.label("")
+			with ui.column().classes("col-span-2"):
+				ui.label("Glow Blur:")
+			slider_glowEblur = ui.slider(min=0,max=8,value=1, on_change=lambda:update_imagesample())
+			ui.label().bind_text_from(slider_glowEblur,'value')
+			slider_glowJblur = ui.slider(min=0,max=8,value=1, on_change=lambda:update_imagesample())
+			ui.label().bind_text_from(slider_glowJblur,'value')
+			ui.label("")
 
 		ui.separator()
 
@@ -2277,10 +2610,12 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 		@ui.refreshable
 		def new_ui_layoutSample() -> None:
 			if new_layout_images>0 and I_new:
-				imgsizeX=math.floor(550/new_layout_columns)
+				imgsizeX=math.floor(math.floor(550)/new_layout_columns)
 				imgsizeY=math.floor(200/new_layout_rows)
-				imgsize=min([imgsizeX,imgsizeY])
-				imgsizeXX=imgsize*new_layout_columns
+				imgsize=min([math.floor(imgsizeX/photoaspect),imgsizeY])
+				imgsizeX=math.floor(imgsize*photoaspect)
+				imgsizeY=imgsize
+				imgsizeXX=math.floor(imgsize*photoaspect)*new_layout_columns
 				imgsizeYY=imgsize*new_layout_rows
 				img_unpadded=len(I_new)-((new_layout_images-1)*new_layout_rows*new_layout_columns)
 
@@ -2293,9 +2628,9 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 							with ui.row(wrap=False).classes("gap-0"):
 								while imgX<=new_layout_columns:
 									if imgN<img_unpadded:
-										ui.icon("square",color="primary", size=f"{imgsize}px")#.style(f"width:{imgsize}px; height:{imgsize}px;")
+										ui.icon("square",color="primary", size=f"{imgsizeX}px")#.style(f"width:{imgsize}px; height:{imgsize}px;")
 									else:
-										ui.icon("square",color="positive", size=f"{imgsize}px")#.style(f"width:{imgsize}px; height:{imgsize}px;")
+										ui.icon("square",color="positive", size=f"{imgsizeX}px")#.style(f"width:{imgsize}px; height:{imgsize}px;")
 									imgN=imgN+1
 									imgX=imgX+1
 							imgY=imgY+1
@@ -2308,8 +2643,12 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 								ui.label(f"{new_layout_images} signature images in total.")
 							ui.label(f"{new_layout_columns * new_layout_rows} photos per image, arranged {new_layout_columns} by {new_layout_rows}.")
 						ui.label(f"{new_layout_pad} padding on the final image (marked in grey).")
-						ui.label(f"Signature image size: {new_layout_columns*imgsize}px by {new_layout_rows*imgsize}px")
-						ui.label(f"Individual photo size: {imgsize}px by {imgsize}px")
+						ui.label(f"Signature image size: {imgsizeXX}px by {imgsizeYY}px")
+						ui.label(f"Individual photo size: {imgsizeX}px by {imgsizeY}px")
+						if photoaspect != 1:
+							with ui.row().classes("items-center"):
+								ui.icon("o_announcement",color="primary", size="25px")
+								ui.label("This preview does not accurately display the photo aspect ratio!")
 						if new_layout_images>2:
 							with ui.row().classes("items-center"):
 								ui.icon("o_announcement",color="primary", size="25px")

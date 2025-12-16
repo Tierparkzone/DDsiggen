@@ -1,5 +1,5 @@
 DDsiggen - Tierparkzone's Forum Signature Generator
-ver.1.16
+ver.1.18
 
 A python-based program/script that takes multiple individual image files and text inputs to create composite images for use as a signature on web forums. The generated output images by default are set up to meet the signature requirements of the DollDreaming forum at "https://www.dolldreaming.com/". Depending on your settings in the software, the generated output images may not actually fulfill the signature requirements of the DollDreaming forum (or any other forum). Please confirm the properties of the output images yourself before using them as signatures.
 The author of this software is a user of the DollDreaming forum but in no other way affiliated with DollDreaming.
@@ -145,3 +145,9 @@ See the LICENSE for terms and conditions for usage and a DISCLAIMER OF ALL WARRA
 
 The project for this software can be found at:
 https://github.com/Tierparkzone/DDsiggen
+
+Special thanks for testing and feedback:
+ragnamuffin
+Amapola
+PolitelyNefarious
+313C7
