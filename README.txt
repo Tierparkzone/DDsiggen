@@ -21,12 +21,14 @@ Generate a signature from multiple photos with only a few clicks.
 
 Create new:
 Generate a signature with custom text and additional options.
+- Set the preferred aspect ratio for your photos
 - Batch import photos from the working directory
 - Import photos one by one from anywhere on your computer or from the web
 - Add or import up to two text layers ("name" and "epithet") that will get applied to the photos
 - Reorder photos and text as desired
-- Select one of the provided alpha masks (photo styles)
+- Select one of the provided alpha masks
 - Customize text font, colors and positions for each text layer (you can also use your own font files)
+- Apply shadow and/or glow effects to the text layers
 - Choose how the photos will be arranged in the signature image(s) or leave it to the program
 - Export the final signature image(s) in multiple resolutions
 
@@ -145,6 +147,8 @@ See the LICENSE for terms and conditions for usage and a DISCLAIMER OF ALL WARRA
 
 The project for this software can be found at:
 https://github.com/Tierparkzone/DDsiggen
+
+
 
 Special thanks for testing and feedback:
 ragnamuffin
