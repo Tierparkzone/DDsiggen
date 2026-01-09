@@ -6,14 +6,16 @@ from nicegui import ui, events, app, native
 from PIL import ImageOps, Image, ImageDraw, ImageTransform, ImageFilter, ImageFont
 from pathlib import Path
 from io import BytesIO
+from base64 import b64encode
 import os
+import re
 import math
 import asyncio
 import requests
 #import imageio as iio
 
 #Version Number
-version_no = "1.18"
+version_no = "2.08"
 
 
 
@@ -21,104 +23,118 @@ version_no = "1.18"
 
 #Import Images (quick sig)
 
-def import_quick(wait_dialog):
+async def import_quick():
 	global quick_updated_flag
 	global quick_undoable_flag
 	global I_quick
 	global I_quick_bak
-	global images
-	global images_bak
+	global import_progress
 
 	quick_updated_flag = False
 	quick_undoable_flag = False
 
 	print("Importing...")
-	images = []
 	f_images = os.listdir(".")
+	f_images.sort()
+	I_quick = []
+	I_quick_counter = 0
+	I_quick_total = len(f_images)
 	for file in f_images:
 		if file.endswith((".jpg", ".png", ".jpeg", ".JPG", ".PNG", ".JPEG")):
-			images.append(file)
-
-	I_fullscale = []
-	for image in images:
-		I_fullscale.append(Image.open(image))
-
-	I_quick = []
-	for image in I_fullscale:
-		ImageOps.exif_transpose(image=image, in_place=True)
-		I_quick.append(ImageOps.fit(image=image, size=[200,200], method=Image.Resampling.LANCZOS, centering=[0.5,0.0]))
+			I_fullscale = Image.open(file)
+			ImageOps.exif_transpose(image=I_fullscale, in_place=True)
+			I_quick.append(ImageOps.fit(image=I_fullscale, size=[200,200], method=Image.Resampling.LANCZOS, centering=[0.5,0.0]))
+		I_quick_counter=I_quick_counter+1
+		import_progress=I_quick_counter/I_quick_total
+		#infostring = f"Importing {I_quick_counter}/{I_quick_total}"
+		await asyncio.sleep(0.01)
+		#print(infostring)
 
 	I_quick_bak = I_quick.copy()
-	images_bak = images.copy()
 	quick_ui_imgSettings.refresh()
 	quick_update_buttons()
-	wait_dialog.close()
 	ui.notify(f"{len(I_quick)} photos found")
 	print("Quick Import Completed!")
 
-def import_quick_launch():
+
+async def import_quick_launch():
+	global import_progress
+	import_progress = 0
+	with ui.dialog().props("persistent") as import_quick_dialog, ui.card():
+		ui.label("Any changes to the list of photos (Step 01.) will be lost. \n This cannot be undone!").style("white-space:pre-wrap;")
+		with ui.row():
+			ui.button("Re-Scan",on_click=lambda: import_quick_dialog.submit(False)).style("width:200px;")
+			ui.button("Cancel",on_click=lambda: import_quick_dialog.submit(True)).props("color=positive").style("width:200px;")
 	with ui.dialog().props("persistent") as wait_dialog, ui.card():
 		with ui.row():
 			ui.spinner()
 			ui.label("Importing...")
-	wait_dialog.on("show",lambda:import_quick(wait_dialog))
-	wait_dialog.open()
+		bar_import_status = ui.linear_progress(value=0,show_value=False).style("width:200px;")
+		ui.timer(0.1,lambda: bar_import_status.set_value(import_progress))
 
-async def import_quick_alert():
-	with ui.dialog().props("persistent") as import_quick_dialog, ui.card():
-		ui.label("Any changes to the list of photos (Step 01.) will be lost. \n This cannot be undone!").style("white-space:pre-wrap;")
-		with ui.row():
-			ui.button("Re-Scan",on_click=lambda: import_quick_dialog.submit(True)).style("width:200px;")
-			ui.button("Cancel",on_click=lambda: import_quick_dialog.submit(False)).props("color=positive").style("width:200px;")
-	is_continue = await import_quick_dialog
-	if is_continue:
-		import_quick_launch()
+	if I_quick:
+		is_abort = await import_quick_dialog
+	else:
+		is_abort = False
+	if is_abort:
+		return
+	wait_dialog.open()
+	await asyncio.sleep(0.01)
+	await import_quick()
+	wait_dialog.close()
 
 
 #Import Images (create new)
 
-def import_new(wait_dialog, import_mode):
+async def import_new(import_mode):
 	global new_updated_flag
 	global new_undoable_flag
 	global I_new
 	global I_new_undo
+	global I_metadata
+	global I_metadata_undo
 	global namesE
 	global namesE_undo
 	global namesJ
 	global namesJ_undo
+	global import_progress
 
 	new_updated_flag = False
 	new_undoable_flag = True
 	I_new_undo = I_new.copy()
+	I_metadata_undo = I_metadata.copy()
 	namesE_undo = namesE.copy()
 	namesJ_undo = namesJ.copy()
 
 	print("Importing...")
-	images = []
 	f_images = os.listdir(".")
-	for file in f_images:
-		if file.endswith((".jpg", ".png", ".jpeg", ".JPG", ".PNG", ".JPEG")):
-			images.append(file)
-
-	I_fullscale = []
-	for image in images:
-		I_fullscale.append(Image.open(image))
-
+	f_images.sort()
 	if import_mode == "Overwrite":
 		I_new = []
-	for image in I_fullscale:
-		ImageOps.exif_transpose(image=image, in_place=True)
-		I_new.append(ImageOps.fit(image=image, size=[photowidth,photoheight], method=Image.Resampling.LANCZOS, centering=[0.5,0.0]))
+		I_metadata = []
+		I_new_reducenames()
+	I_new_counter = 0
+	I_new_total = len(f_images)
+	for file in f_images:
+		if file.endswith((".jpg", ".png", ".jpeg", ".JPG", ".PNG", ".JPEG")):
+			I_fullscale = Image.open(file)
+			ImageOps.exif_transpose(image=I_fullscale, in_place=True)
+			I_new.append(ImageOps.fit(image=I_fullscale, size=[photowidth,photoheight], method=Image.Resampling.LANCZOS, centering=[0.5,0.0]))
+			I_metadata.append([I_fullscale.size,I_fullscale.size[0]/I_fullscale.size[1],file,False])
+		I_new_counter=I_new_counter+1
+		import_progress=I_new_counter/I_new_total
+		await asyncio.sleep(0.01)
 
 	I_new_padnames()
 	new_ui_characterlist.refresh()
 	new_button_undoDisplay.refresh()
 	new_ui_siglayout.refresh()
-	wait_dialog.close()
-	#ui.notify(f"{len(I_new)} photos found")
+	ui.notify(f"{len(I_new)} photos found")
 	print("New Import Completed!")
 
 async def import_new_launch():
+	global import_progress
+	import_progress = 0
 	with ui.dialog().props("persistent") as import_mode_dialog, ui.card():
 		with ui.column().classes("items-center"):
 			ui.label("Entries already exist in the photo column. How do you wish to import the new photos?").style("max-width:300px;")
@@ -128,34 +144,48 @@ async def import_new_launch():
 	with ui.dialog().props("persistent") as wait_dialog, ui.card():
 		with ui.row():
 			ui.spinner()
-			ui.label("Importing...")
+			label_import_status = ui.label("Importing...")
+		bar_import_status = ui.linear_progress(value=0,show_value=False).style("width:200px;")
+		ui.timer(0.1,lambda: bar_import_status.set_value(import_progress))
 	if I_new:
 		import_mode = await import_mode_dialog
 	else:
 		import_mode = "Overwrite"
 	if import_mode == "Cancel":
 		return()
-	wait_dialog.on("show",lambda:import_new(wait_dialog, import_mode))
 	wait_dialog.open()
+	await asyncio.sleep(0.01)
+	await import_new(import_mode)
+	wait_dialog.close()
+
 
 
 def image_from_url(image_url):
+	global imported_no
 	print(f"Importing {image_url} ...")
-	url_response = requests.get(image_url)
+	try:
+		url_response = requests.get(image_url)
+	except:
+		ui.notify("This is not an URL!")
+		print("Aborting ...")
+		return(False,False)
 	print("Connecting ...")
 	try:
 		new_image = Image.open(BytesIO(url_response.content))
 	except:
 		ui.notify("URL is not an image!")
 		print("Aborting ...")
-		return(False)
+		return(False,False)
 	else:
+		os.makedirs("./tmp", exist_ok=True)
+		imported_no=imported_no+1
 		print("Extracting Image ...")
 		ImageOps.exif_transpose(image=new_image, in_place=True)
-		print("Transposing ...")
+		tmp_image = ImageOps.cover(image=new_image, size=[600,600], method=Image.Resampling.LANCZOS)
+		new_metadata=[tmp_image.size,tmp_image.size[0]/tmp_image.size[1],f"./tmp/url_import_{imported_no:03d}.png",False]
+		tmp_image.save(new_metadata[2])
 		scaled_image = ImageOps.fit(image=new_image, size=[photowidth,photoheight], method=Image.Resampling.LANCZOS, centering=[0.5,0.0])
-		print("Rescaling ...")
-		return(scaled_image)
+		return(scaled_image,new_metadata)
 
 async def import_from_url():
 	with ui.dialog().props("persistent") as import_url_dialog, ui.card():
@@ -168,6 +198,8 @@ async def import_from_url():
 	global new_undoable_flag
 	global I_new
 	global I_new_undo
+	global I_metadata
+	global I_metadata_undo
 	global namesE
 	global namesE_undo
 	global namesJ
@@ -175,19 +207,19 @@ async def import_from_url():
 
 	image_url = await import_url_dialog
 	if image_url:
-		scaled_image = image_from_url(image_url)
+		scaled_image,new_metadata = image_from_url(image_url)
 		if scaled_image:
 			print("Adding to image list ...")
 			new_updated_flag = False
 			I_new_undo = I_new.copy()
+			I_metadata_undo = I_metadata.copy()
 			namesE_undo = namesE.copy()
 			namesJ_undo = namesJ.copy()
 			I_new.append(scaled_image)
+			I_metadata.append(new_metadata)
 			I_new_padnames()
 			new_undoable_flag = True
 			print("Import from URL completed!")
-		else:
-			print("URL is not an image!")
 	new_ui_characterlist.refresh()
 	new_button_undoDisplay.refresh()
 	new_ui_siglayout.refresh()
@@ -203,10 +235,13 @@ async def import_local():
 	global new_undoable_flag
 	global I_new
 	global I_new_undo
+	global I_metadata
+	global I_metadata_undo
 	global namesE
 	global namesE_undo
 	global namesJ
 	global namesJ_undo
+	global imported_no
 
 	new_file = await import_local_dialog
 	#print(f"{new_file}")
@@ -219,11 +254,18 @@ async def import_local():
 		else:
 			new_updated_flag = False
 			I_new_undo = I_new.copy()
+			I_metadata_undo = I_metadata.copy()
 			namesE_undo = namesE.copy()
 			namesJ_undo = namesJ.copy()
+			os.makedirs("./tmp", exist_ok=True)
+			imported_no=imported_no+1
 			ImageOps.exif_transpose(image=new_image, in_place=True)
+			tmp_image = ImageOps.cover(image=new_image, size=[600,600], method=Image.Resampling.LANCZOS)
+			new_metadata=[tmp_image.size,tmp_image.size[0]/tmp_image.size[1],f"./tmp/loc_import_{imported_no:03d}.png",False]
+			tmp_image.save(new_metadata[2])
 			scaled_image = ImageOps.fit(image=new_image, size=[photowidth,photoheight], method=Image.Resampling.LANCZOS, centering=[0.5,0.0])
 			I_new.append(scaled_image)
+			I_metadata.append(new_metadata)
 			I_new_padnames()
 			new_undoable_flag = True
 			print("Local import completed!")
@@ -231,6 +273,88 @@ async def import_local():
 	new_button_undoDisplay.refresh()
 	new_ui_siglayout.refresh()
 
+async def directory_import():
+	global new_updated_flag
+	global new_undoable_flag
+	global I_new
+	global I_new_undo
+	global I_metadata
+	global I_metadata_undo
+	global namesE
+	global namesE_undo
+	global namesJ
+	global namesJ_undo
+	directory_progress = "Reading 'doll_directory.txt'..."
+
+	with ui.dialog().props("persistent") as wait_dialog, ui.card():
+		with ui.row():
+			ui.spinner()
+			label_import_status = ui.label("Importing...")
+		ui.timer(0.1,lambda: label_import_status.set_text(directory_progress))
+
+	try:
+		f_dolls = open("doll_directory.txt","r",encoding="utf-8")
+	except:
+		ui.notify("File 'doll_directory.txt' was not found!")
+	else:
+		new_dolls = f_dolls.readlines()
+		new_dolls = [i.rstrip() for i in new_dolls]
+		with ui.dialog().props("persistent") as import_directory_dialog, ui.card():
+			ui.label(f"About to import photos from {len(new_dolls)} doll directory entries. This may take some time. ")
+			with ui.row():
+				ui.button("Import",on_click=lambda: import_directory_dialog.submit(False)).style("width:200px;")
+				ui.button("Cancel",on_click=lambda: import_directory_dialog.submit(True)).props("color=positive").style("width:200px;")
+		is_abort = await import_directory_dialog
+		if is_abort:
+			return
+		wait_dialog.open()
+		await asyncio.sleep(0.01)
+		new_updated_flag = False
+		I_new_undo = I_new.copy()
+		I_metadata_undo = I_metadata.copy()
+		namesE_undo = namesE.copy()
+		namesJ_undo = namesJ.copy()
+		dollpos = 0
+		dolls_total = len(new_dolls)
+		for doll in new_dolls:
+			try:
+				url_response = requests.get(doll)
+				url_response = url_response.text
+				dollname=re.findall(r'"og:title" content=".*"',url_response)
+				dollname=dollname[0]
+				dollname=dollname.lstrip('"og:title" content="')
+				dollname=dollname.rstrip('"')
+				imageurls = re.findall(r'data-fullURL=".*"',url_response)
+				print(f"{len(imageurls)} photos found for {dollname}")
+				dollpos=dollpos+1
+				if len(imageurls)==1:
+					directory_progress=f"Importing doll {dollpos}/{dolls_total}: {dollname} with {len(imageurls)} photo."
+				else:
+					directory_progress=f"Importing doll {dollpos}/{dolls_total}: {dollname} with {len(imageurls)} photos."
+				await asyncio.sleep(0.01)
+				for imageurl in imageurls:
+					imageurl=imageurl.lstrip('data-fullURL="')
+					imageurl=imageurl.rstrip('"')
+					scaled_image,new_metadata = image_from_url(imageurl)
+					if scaled_image:
+						I_new.append(scaled_image)
+						I_metadata.append(new_metadata)
+						if len(namesE)<len(I_new):
+							namesE.append(dollname)
+						else:
+							namesE[len(I_new)-1]=dollname
+					await asyncio.sleep(0.01)
+			except:
+				ui.notify("This is not a doll directory link!")
+		I_new_padnames()
+		new_ui_characterlist.refresh()
+		new_undoable_flag=True
+		#new_ui_characterlist.refresh()
+		new_button_undoDisplay.refresh()
+		new_ui_siglayout.refresh()
+		wait_dialog.close()
+		#ui.notify("Import from doll directory successful!")
+		print("Import from doll directory complete!")
 
 
 #Import other data
@@ -240,6 +364,8 @@ async def import_namesE():
 	global new_undoable_flag
 	global I_new
 	global I_new_undo
+	global I_metadata
+	global I_metadata_undo
 	global namesE
 	global namesE_undo
 	global namesJ
@@ -259,6 +385,7 @@ async def import_namesE():
 	if import_mode == "Cancel":
 		return()
 	I_new_undo = I_new.copy()
+	I_metadata_undo = I_metadata.copy()
 	namesE_undo = namesE.copy()
 	namesJ_undo = namesJ.copy()
 	if import_mode == "Append":
@@ -287,6 +414,8 @@ async def import_namesJ():
 	global new_undoable_flag
 	global I_new
 	global I_new_undo
+	global I_metadata
+	global I_metadata_undo
 	global namesE
 	global namesE_undo
 	global namesJ
@@ -306,6 +435,7 @@ async def import_namesJ():
 	if import_mode == "Cancel":
 		return()
 	I_new_undo = I_new.copy()
+	I_metadata_undo = I_metadata.copy()
 	namesE_undo = namesE.copy()
 	namesJ_undo = namesJ.copy()
 	if import_mode == "Append":
@@ -368,6 +498,7 @@ def scan_fonts():
 	except:
 		ui.notify("Folder 'fonts' not found!")
 	else:
+		f_fonts.sort()
 		for file in f_fonts:
 			if file.endswith((".ttf", ".otf", ".TTF", ".OTF")):
 				fonts_list.append(file)
@@ -395,6 +526,8 @@ async def I_new_renameE(current_idx) -> None:
 	global new_undoable_flag
 	global I_new
 	global I_new_undo
+	global I_metadata
+	global I_metadata_undo
 	global namesE
 	global namesE_undo
 	global namesJ
@@ -405,14 +538,15 @@ async def I_new_renameE(current_idx) -> None:
 	if newnameE!=currentnameE:
 		#new_updated_flag = False
 		I_new_undo = I_new.copy()
+		I_metadata_undo = I_metadata.copy()
 		namesE_undo = namesE.copy()
 		namesJ_undo = namesJ.copy()
 		namesE[current_idx] = newnameE
 		I_new_reducenames()
 		new_undoable_flag = True
 		ui.notify(f"Name set to '{newnameE}'.")
-	new_ui_characterlist.refresh()
-	new_button_undoDisplay.refresh()
+		new_ui_characterlist.refresh()
+		new_button_undoDisplay.refresh()
 
 
 async def I_new_renameJ(current_idx) -> None:
@@ -427,6 +561,8 @@ async def I_new_renameJ(current_idx) -> None:
 	global new_undoable_flag
 	global I_new
 	global I_new_undo
+	global I_metadata
+	global I_metadata_undo
 	global namesE
 	global namesE_undo
 	global namesJ
@@ -437,14 +573,15 @@ async def I_new_renameJ(current_idx) -> None:
 	if newnameJ!=currentnameJ:
 		#new_updated_flag = False
 		I_new_undo = I_new.copy()
+		I_metadata_undo = I_metadata.copy()
 		namesE_undo = namesE.copy()
 		namesJ_undo = namesJ.copy()
 		namesJ[current_idx] = newnameJ
 		I_new_reducenames()
 		new_undoable_flag = True
-		ui.notify(f"Name set to '{newnameJ}'.")
-	new_ui_characterlist.refresh()
-	new_button_undoDisplay.refresh()
+		ui.notify(f"Epithet set to '{newnameJ}'.")
+		new_ui_characterlist.refresh()
+		new_button_undoDisplay.refresh()
 
 
 #Reorder Images (quick sig)
@@ -454,15 +591,11 @@ def I_quick_moveup(current_idx) -> None:
 	global quick_undoable_flag
 	global I_quick
 	global I_quick_undo
-	global images
-	global images_undo
 	if current_idx>0:
 		quick_updated_flag = False
 		#ui.notify(f"Moved down {current_idx}.")
 		I_quick_undo = I_quick.copy()
-		images_undo = images.copy()
 		I_quick.insert(current_idx-1, I_quick.pop(current_idx))
-		images.insert(current_idx-1, images.pop(current_idx))
 		quick_undoable_flag = True
 	quick_list_imgDisplay.refresh()
 	quick_update_buttons()
@@ -472,15 +605,11 @@ def I_quick_movedn(current_idx) -> None:
 	global quick_undoable_flag
 	global I_quick
 	global I_quick_undo
-	global images
-	global images_undo
 	if current_idx<len(I_quick)-1:
 		quick_updated_flag = False
 		#ui.notify(f"Moved up {current_idx}.")
 		I_quick_undo = I_quick.copy()
-		images_undo = images.copy()
 		I_quick.insert(current_idx+1, I_quick.pop(current_idx))
-		images.insert(current_idx+1, images.pop(current_idx))
 		quick_undoable_flag = True
 	quick_list_imgDisplay.refresh()
 	quick_update_buttons()
@@ -490,14 +619,10 @@ def I_quick_delete(current_idx) -> None:
 	global quick_undoable_flag
 	global I_quick
 	global I_quick_undo
-	global images
-	global images_undo
 	quick_updated_flag = False
 	#ui.notify(f"Deleted {current_idx}.")
 	I_quick_undo = I_quick.copy()
-	images_undo = images.copy()
 	I_quick.pop(current_idx)
-	images.pop(current_idx)
 	ui.notify("Photo removed from list")
 	quick_undoable_flag = True
 	quick_list_imgDisplay.refresh()
@@ -509,14 +634,9 @@ def I_quick_reset() -> None:
 	global I_quick
 	global I_quick_undo
 	global I_quick_bak
-	global images
-	global images_undo
-	global images_bak
 	quick_updated_flag = False
 	I_quick_undo = I_quick.copy()
-	images_undo = images.copy()
 	I_quick = I_quick_bak.copy()
-	images = images_bak.copy()
 	ui.notify("List of photos was reset")
 	quick_undoable_flag = True
 	quick_list_imgDisplay.refresh()
@@ -527,12 +647,9 @@ def I_quick_undofunc() -> None:
 	global quick_undoable_flag
 	global I_quick
 	global I_quick_undo
-	global images
-	global images_undo
 	quick_updated_flag = False
 	quick_undoable_flag = False
 	I_quick = I_quick_undo.copy()
-	images = images_undo.copy()
 	ui.notify("Last operation undone")
 	quick_list_imgDisplay.refresh()
 	quick_update_buttons()
@@ -545,6 +662,8 @@ def row_new_moveup(current_idx) -> None:
 	global new_undoable_flag
 	global I_new
 	global I_new_undo
+	global I_metadata
+	global I_metadata_undo
 	global namesE
 	global namesE_undo
 	global namesJ
@@ -552,9 +671,11 @@ def row_new_moveup(current_idx) -> None:
 	if current_idx>0:
 		#new_updated_flag = False
 		I_new_undo = I_new.copy()
+		I_metadata_undo = I_metadata.copy()
 		namesE_undo = namesE.copy()
 		namesJ_undo = namesJ.copy()
 		I_new.insert(current_idx-1, I_new.pop(current_idx))
+		I_metadata.insert(current_idx-1, I_metadata.pop(current_idx))
 		namesE.insert(current_idx-1, namesE.pop(current_idx))
 		namesJ.insert(current_idx-1, namesJ.pop(current_idx))
 		new_undoable_flag = True
@@ -566,6 +687,8 @@ def row_new_movedn(current_idx) -> None:
 	global new_undoable_flag
 	global I_new
 	global I_new_undo
+	global I_metadata
+	global I_metadata_undo
 	global namesE
 	global namesE_undo
 	global namesJ
@@ -573,9 +696,11 @@ def row_new_movedn(current_idx) -> None:
 	if current_idx<len(I_new)-1:
 		#new_updated_flag = False
 		I_new_undo = I_new.copy()
+		I_metadata_undo = I_metadata.copy()
 		namesE_undo = namesE.copy()
 		namesJ_undo = namesJ.copy()
 		I_new.insert(current_idx+1, I_new.pop(current_idx))
+		I_metadata.insert(current_idx+1, I_metadata.pop(current_idx))
 		namesE.insert(current_idx+1, namesE.pop(current_idx))
 		namesJ.insert(current_idx+1, namesJ.pop(current_idx))
 		new_undoable_flag = True
@@ -587,15 +712,19 @@ def row_new_delete(current_idx) -> None:
 	global new_undoable_flag
 	global I_new
 	global I_new_undo
+	global I_metadata
+	global I_metadata_undo
 	global namesE
 	global namesE_undo
 	global namesJ
 	global namesJ_undo
 	new_updated_flag = False
 	I_new_undo = I_new.copy()
+	I_metadata_undo = I_metadata.copy()
 	namesE_undo = namesE.copy()
 	namesJ_undo = namesJ.copy()
 	I_new.pop(current_idx)
+	I_metadata.pop(current_idx)
 	namesE.pop(current_idx)
 	namesJ.pop(current_idx)
 	ui.notify("Row removed from list")
@@ -609,6 +738,8 @@ def I_new_moveup(current_idx) -> None:
 	global new_undoable_flag
 	global I_new
 	global I_new_undo
+	global I_metadata
+	global I_metadata_undo
 	global namesE
 	global namesE_undo
 	global namesJ
@@ -616,9 +747,11 @@ def I_new_moveup(current_idx) -> None:
 	if current_idx>0:
 		#new_updated_flag = False
 		I_new_undo = I_new.copy()
+		I_metadata_undo = I_metadata.copy()
 		namesE_undo = namesE.copy()
 		namesJ_undo = namesJ.copy()
 		I_new.insert(current_idx-1, I_new.pop(current_idx))
+		I_metadata.insert(current_idx-1, I_metadata.pop(current_idx))
 		new_undoable_flag = True
 	new_ui_characterlist.refresh()
 	new_button_undoDisplay.refresh()
@@ -628,6 +761,8 @@ def I_new_movedn(current_idx) -> None:
 	global new_undoable_flag
 	global I_new
 	global I_new_undo
+	global I_metadata
+	global I_metadata_undo
 	global namesE
 	global namesE_undo
 	global namesJ
@@ -635,9 +770,11 @@ def I_new_movedn(current_idx) -> None:
 	if current_idx<len(I_new)-1:
 		#new_updated_flag = False
 		I_new_undo = I_new.copy()
+		I_metadata_undo = I_metadata.copy()
 		namesE_undo = namesE.copy()
 		namesJ_undo = namesJ.copy()
 		I_new.insert(current_idx+1, I_new.pop(current_idx))
+		I_metadata.insert(current_idx+1, I_metadata.pop(current_idx))
 		new_undoable_flag = True
 	new_ui_characterlist.refresh()
 	new_button_undoDisplay.refresh()
@@ -647,6 +784,8 @@ async def I_new_clear():
 	global new_undoable_flag
 	global I_new
 	global I_new_undo
+	global I_metadata
+	global I_metadata_undo
 	global namesE
 	global namesE_undo
 	global namesJ
@@ -663,20 +802,24 @@ async def I_new_clear():
 		if is_continue:
 			new_updated_flag = False
 			I_new_undo = I_new.copy()
+			I_metadata_undo = I_metadata.copy()
 			namesE_undo = namesE.copy()
 			namesJ_undo = namesJ.copy()
 			I_new = []
+			I_metadata = []
 			I_new_reducenames()
 			new_undoable_flag = True
-	new_ui_characterlist.refresh()
-	new_button_undoDisplay.refresh()
-	new_ui_siglayout.refresh()
+			new_ui_characterlist.refresh()
+			new_button_undoDisplay.refresh()
+			new_ui_siglayout.refresh()
 
 def namesE_moveup(current_idx) -> None:
 	global new_updated_flag
 	global new_undoable_flag
 	global I_new
 	global I_new_undo
+	global I_metadata
+	global I_metadata_undo
 	global namesE
 	global namesE_undo
 	global namesJ
@@ -684,6 +827,7 @@ def namesE_moveup(current_idx) -> None:
 	if current_idx>0:
 		#new_updated_flag = False
 		I_new_undo = I_new.copy()
+		I_metadata_undo = I_metadata.copy()
 		namesE_undo = namesE.copy()
 		namesJ_undo = namesJ.copy()
 		namesE.insert(current_idx-1, namesE.pop(current_idx))
@@ -696,6 +840,8 @@ def namesE_movedn(current_idx) -> None:
 	global new_undoable_flag
 	global I_new
 	global I_new_undo
+	global I_metadata
+	global I_metadata_undo
 	global namesE
 	global namesE_undo
 	global namesJ
@@ -703,6 +849,7 @@ def namesE_movedn(current_idx) -> None:
 	if current_idx<len(namesE)-1:
 		#new_updated_flag = False
 		I_new_undo = I_new.copy()
+		I_metadata_undo = I_metadata.copy()
 		namesE_undo = namesE.copy()
 		namesJ_undo = namesJ.copy()
 		namesE.insert(current_idx+1, namesE.pop(current_idx))
@@ -715,6 +862,8 @@ async def namesE_clear():
 	global new_undoable_flag
 	global I_new
 	global I_new_undo
+	global I_metadata
+	global I_metadata_undo
 	global namesE
 	global namesE_undo
 	global namesJ
@@ -731,19 +880,22 @@ async def namesE_clear():
 		is_continue = await confirm_clear_dialog
 		if is_continue:
 			I_new_undo = I_new.copy()
+			I_metadata_undo = I_metadata.copy()
 			namesE_undo = namesE.copy()
 			namesJ_undo = namesJ.copy()
 			namesE = []
 			I_new_padnames()
 			new_undoable_flag = True
-	new_ui_characterlist.refresh()
-	new_button_undoDisplay.refresh()
+			new_ui_characterlist.refresh()
+			new_button_undoDisplay.refresh()
 
 def namesJ_moveup(current_idx) -> None:
 	global new_updated_flag
 	global new_undoable_flag
 	global I_new
 	global I_new_undo
+	global I_metadata
+	global I_metadata_undo
 	global namesE
 	global namesE_undo
 	global namesJ
@@ -751,6 +903,7 @@ def namesJ_moveup(current_idx) -> None:
 	if current_idx>0:
 		#new_updated_flag = False
 		I_new_undo = I_new.copy()
+		I_metadata_undo = I_metadata.copy()
 		namesE_undo = namesE.copy()
 		namesJ_undo = namesJ.copy()
 		namesJ.insert(current_idx-1, namesJ.pop(current_idx))
@@ -763,6 +916,8 @@ def namesJ_movedn(current_idx) -> None:
 	global new_undoable_flag
 	global I_new
 	global I_new_undo
+	global I_metadata
+	global I_metadata_undo
 	global namesE
 	global namesE_undo
 	global namesJ
@@ -770,6 +925,7 @@ def namesJ_movedn(current_idx) -> None:
 	if current_idx<len(namesE)-1:
 		#new_updated_flag = False
 		I_new_undo = I_new.copy()
+		I_metadata_undo = I_metadata.copy()
 		namesE_undo = namesE.copy()
 		namesJ_undo = namesJ.copy()
 		namesJ.insert(current_idx+1, namesJ.pop(current_idx))
@@ -782,6 +938,8 @@ async def namesJ_clear():
 	global new_undoable_flag
 	global I_new
 	global I_new_undo
+	global I_metadata
+	global I_metadata_undo
 	global namesE
 	global namesE_undo
 	global namesJ
@@ -798,19 +956,22 @@ async def namesJ_clear():
 		is_continue = await confirm_clear_dialog
 		if is_continue:
 			I_new_undo = I_new.copy()
+			I_metadata_undo = I_metadata.copy()
 			namesE_undo = namesE.copy()
 			namesJ_undo = namesJ.copy()
 			namesJ = []
 			I_new_padnames()
 			new_undoable_flag = True
-	new_ui_characterlist.refresh()
-	new_button_undoDisplay.refresh()
+			new_ui_characterlist.refresh()
+			new_button_undoDisplay.refresh()
 
 def I_new_undofunc() -> None:
 	global new_updated_flag
 	global new_undoable_flag
 	global I_new
 	global I_new_undo
+	global I_metadata
+	global I_metadata_undo
 	global namesE
 	global namesE_undo
 	global namesJ
@@ -818,6 +979,7 @@ def I_new_undofunc() -> None:
 	new_updated_flag = False
 	new_undoable_flag = False
 	I_new = I_new_undo.copy()
+	I_metadata = I_metadata_undo.copy()
 	namesE = namesE_undo.copy()
 	namesJ = namesJ_undo.copy()
 	ui.notify("Last operation undone")
@@ -1110,10 +1272,10 @@ def sig_textcropper(textimage):
 		cropwidth = 50
 		print("Text layer is empty!")
 	textimage2 = textimage2.crop((0,0,cropwidth,cropheight))
-	if textimage2.size[0]>photowidth and new_handle_oversize.value=="Squish":
-		textimage2=textimage2.resize(size=(photowidth,cropheight),resample=Image. Resampling.LANCZOS)
-	if textimage2.size[0]>photowidth and new_handle_oversize.value=="Shrink":
-		textimage2=ImageOps.contain(image=textimage2, size=[photowidth,photoheight], method=Image.Resampling.LANCZOS)
+	if textimage2.size[0]>photowidth-2*oversize_margin and new_handle_oversize.value=="Squish":
+		textimage2=textimage2.resize(size=(photowidth-2*oversize_margin,cropheight),resample=Image. Resampling.LANCZOS)
+	if textimage2.size[0]>photowidth-2*oversize_margin and new_handle_oversize.value=="Shrink":
+		textimage2=ImageOps.contain(image=textimage2, size=[photowidth-2*oversize_margin,photoheight], method=Image.Resampling.LANCZOS)
 	return(textimage2)
 
 def new_generate_textshadow(textlayerE,textlayerJ):
@@ -1376,6 +1538,220 @@ def draw_amasks():
 	aMask_blskrc = ImageOps.contain(image=aMask_blskrc, size=[photowidth,photoheight], method=Image.Resampling.LANCZOS)
 
 
+#Manually Crop Photos
+
+def encodeimage(image):
+	enacodearray=BytesIO()
+	image.save(enacodearray,format="PNG")
+	return enacodearray.getvalue()
+
+def dragging_start(e):
+	global isdragging
+	global drag_xinit
+	global drag_yinit
+	global viewp_xoff_bak
+	global viewp_yoff_bak
+	drag_xinit = e.args["x"]
+	drag_yinit = e.args["y"]
+	viewp_xoff_bak = viewp_xoff
+	viewp_yoff_bak = viewp_yoff
+	isdragging = True
+	#print("start")
+
+def dragging_do(e):
+	global viewp_xoff
+	global viewp_yoff
+	if isdragging:
+		viewp_xoff = viewp_xoff_bak+e.args["x"]-drag_xinit
+		viewp_yoff = viewp_yoff_bak+e.args["y"]-drag_yinit
+		if viewp_xoff>0:
+			viewp_xoff=0
+		elif viewp_xoff+math.floor(viewp_width*currentzoom)<photowidth:
+			viewp_xoff=photowidth-math.floor(viewp_width*currentzoom)
+		if viewp_yoff>0:
+			viewp_yoff=0
+		elif viewp_yoff+math.floor(viewp_height*currentzoom)<photoheight:
+			viewp_yoff=photoheight-math.floor(viewp_height*currentzoom)
+		update_kanvas()
+
+def dragging_end():
+	global isdragging
+	isdragging = False
+	#print("stop")
+
+def update_kanvas():
+	global select_overlay
+	kanvas.content = f"<image href='{I_enc}' x='{viewp_xoff}' y='{viewp_yoff}' width='{math.floor(viewp_width*currentzoom)}' height='{math.floor(viewp_height*currentzoom)}' />"
+	if select_overlay == "Grid":
+		kanvas.content = kanvas.content + f"<line x1='{0}' y1='{math.floor(photoheight/3)}' x2='{(photowidth)}' y2='{math.floor(photoheight/3)}' stroke='red' stroke-opacity='{0.6}' stroke-width='2' /> <line x1='{0}' y1='{math.ceil(2*photoheight/3)}' x2='{(photowidth)}' y2='{math.ceil(2*photoheight/3)}' stroke='red' stroke-opacity='{0.6}' stroke-width='2' /> <line x1='{math.floor(photowidth/3)}' y1='{0}' x2='{math.floor(photowidth/3)}' y2='{(photoheight)}' stroke='red' stroke-opacity='{0.6}' stroke-width='2' /> <line x1='{math.ceil(2*photowidth/3)}' y1='{0}' x2='{math.ceil(2*photowidth/3)}' y2='{(photoheight)}' stroke='red' stroke-opacity='{0.6}' stroke-width='2' />"
+	elif select_overlay == "Circles":
+		kanvas.content = kanvas.content + f"<circle cx='{math.floor(0.5*photowidth)}' cy='{min(math.floor(0.5*photowidth),math.floor(0.5*photoheight))}' r='{math.floor(0.4*photowidth)}' fill='none' stroke='red' stroke-opacity='{0.6}' stroke-width='2' /> <circle cx='{math.floor(0.5*photowidth)}' cy='{min(math.floor(0.5*photowidth),math.floor(0.5*photoheight))}' r='{math.floor(0.3*photowidth)}' fill='none' stroke='red' stroke-opacity='{0.6}' stroke-width='2' /> <circle cx='{math.floor(0.5*photowidth)}' cy='{min(math.floor(0.5*photowidth),math.floor(0.5*photoheight))}' r='{math.floor(0.2*photowidth)}' fill='none' stroke='red' stroke-opacity='{0.6}' stroke-width='2' /> <circle cx='{math.floor(0.5*photowidth)}' cy='{min(math.floor(0.5*photowidth),math.floor(0.5*photoheight))}' r='{2}' fill='none' stroke='red' stroke-opacity='{0.6}' stroke-width='2' />"
+	#elif select_overlay == "Shillouette":
+		#photoscale=min(photoheight,photowidth)
+		#kanvas.content = kanvas.content + f"<circle cx='{math.floor(0.5*photowidth)}' cy='{math.floor(0.4*photoscale)}' r='{math.floor(0.33*photoscale)}' fill='none' stroke='red' stroke-opacity='{0.6}' stroke-width='2' /> <circle cx='{math.floor(0.5*photowidth)}' cy='{math.floor(0.58*photoscale)}' r='{math.floor(0.2*photoscale)}' fill='none' stroke='red' stroke-opacity='{0.6}' stroke-width='2' /> <path d='m {math.floor(0.5*photowidth-0.08*photoscale),math.floor(0.78*photoscale)} c -0.340595,2.270641 -0.681185,4.54124 -4.143983,6.073954 -3.462799,1.532715 -10.047528,2.327423 -16.632391,3.122148' fill='none' stroke='red' stroke-opacity='{0.6}' stroke-width='2' />"
+		#math.floor(0.5*photowidth-0.09*photoscale),math.floor(0.87*photoscale)],[math.floor(0.5*photowidth-0.29*photoscale),math.floor(0.9*photoscale)]}'
+
+
+def switchoverlay(new_overlay):
+	global select_overlay
+	select_overlay = new_overlay
+	update_kanvas()
+
+def adjustzoom(newzoom):
+    global currentzoom
+    global viewp_xoff
+    global viewp_yoff
+    viewp_xoff=math.floor((viewp_xoff-0.5*photowidth)*newzoom/currentzoom+0.5*photowidth)
+    viewp_yoff=math.floor((viewp_yoff-0.5*photoheight)*newzoom/currentzoom+0.5*photoheight)
+    currentzoom=newzoom
+    if viewp_xoff>0:
+        viewp_xoff=0
+    elif viewp_xoff+math.floor(viewp_width*currentzoom)<photowidth:
+        viewp_xoff=photowidth-math.floor(viewp_width*currentzoom)
+    if viewp_yoff>0:
+        viewp_yoff=0
+    elif viewp_yoff+math.floor(viewp_height*currentzoom)<photoheight:
+        viewp_yoff=photoheight-math.floor(viewp_height*currentzoom)
+    update_kanvas()
+
+async def I_new_cropimage(entry_nr):
+	global I_new
+	global I_new_undo
+	global I_metadata
+	global I_metadata_undo
+	global namesE_undo
+	global namesJ_undo
+	global new_undoable_flag
+	global isdragging
+	global drag_xinit
+	global drag_yinit
+	global currentzoom
+	global viewp_xoff
+	global viewp_yoff
+	global viewp_xoff_bak
+	global viewp_yoff_bak
+	global I_enc
+	global viewp_width
+	global viewp_height
+	global kanvas
+	global select_overlay
+	update_progress = 0
+
+	try:
+		I_tmp = Image.open(I_metadata[entry_nr][2])
+	except:
+		ui.notify(f"Image file ''{I_metadata[entry_nr][2]}' not found! Custom crop not possible.")
+		return
+	ImageOps.exif_transpose(image=I_tmp, in_place=True)
+	I_tmp = ImageOps.cover(image=I_tmp, size=[600,600], method=Image.Resampling.LANCZOS)
+	I_enc = encodeimage(I_tmp)
+	I_enc = b64encode(I_enc).decode("utf-8")
+	I_enc = f"data:image/png;base64,{I_enc}"
+	I_tmp_aspect = I_tmp.size[0]/I_tmp.size[1]
+
+	isdragging = False
+	drag_xinit = 0
+	drag_yinit = 0
+	currentzoom = 1
+	select_overlay="None"
+
+	if photoaspect<I_tmp_aspect:
+		viewp_width = math.ceil(photoheight*I_tmp_aspect)
+		viewp_height = photoheight
+		viewp_xoff = -math.floor(0.5*(viewp_width-photowidth))
+		viewp_yoff = 0
+		aspect_mode="wide"
+	elif photoaspect>I_tmp_aspect:
+		viewp_width = photowidth
+		viewp_height = math.ceil(photowidth/I_tmp_aspect)
+		viewp_xoff = 0
+		viewp_yoff = 0
+		aspect_mode="tall"
+	else:
+		viewp_width = photowidth
+		viewp_height = photoheight
+		viewp_xoff = 0
+		viewp_yoff = 0
+		aspect_mode="match"
+	viewp_xoff_bak = viewp_xoff
+	viewp_yoff_bak = viewp_yoff
+	if aspect_mode=="wide":
+		maxzoom = I_tmp.size[1]/photoheight
+	else:
+		maxzoom = I_tmp.size[0]/photowidth
+	maxzoom = max(maxzoom,1.5)
+	maxzoom = min(maxzoom,3)
+
+	with ui.dialog().props("persistent") as cropimage_dialog, ui.card():
+		ui.label("Adjust the zoom and drag your photo until you are satisfied with the crop.").style("max-width:300px;")
+		kanvas = ui.interactive_image(size=(photowidth,photoheight)).classes("border p-1").style(f"width:{photowidth}px;")
+		update_kanvas()
+		kanvas.on("pointerdown", dragging_start)
+		kanvas.on("pointermove", dragging_do)
+		kanvas.on("pointerup", dragging_end)
+		kanvas.on("pointerleave", dragging_end)
+
+		ui.label("Zoom")
+		with ui.row():
+			slider_zoom = ui.slider(min=1,max=maxzoom,value=1,step=0.1, on_change=lambda e: adjustzoom(e.value)).style(f"width:200px;")
+			ui.label().bind_text_from(slider_zoom,"value")
+		ui.label("Overlay")
+		radio_select_overlay = ui.radio(["None","Grid","Circles"],value="None", on_change=lambda e: switchoverlay(e.value)).props("inline")
+		ui.button("Apply to this photo", on_click=lambda: cropimage_dialog.submit("photo")).style("width:200px;")
+		with ui.button("Apply to all", on_click=lambda: cropimage_dialog.submit("all")).style("width:200px;"):
+			ui.tooltip("Apply this crop to all photos with the same size that don't have a custom crop already.").props("max-width='200px'").classes("default_tooltip")
+		ui.button("Cancel", on_click=lambda: cropimage_dialog.submit("abort")).props("color=positive").style("width:200px;")
+
+	with ui.dialog().props("persistent") as wait_dialog, ui.card():
+		with ui.row():
+			ui.spinner()
+			ui.label("Updating...")
+		bar_import_status = ui.linear_progress(value=0,show_value=False).style("width:200px;")
+		ui.timer(0.1,lambda: bar_import_status.set_value(update_progress))
+
+	crop_mode = await cropimage_dialog
+	if crop_mode=="abort":
+		return
+	I_new_undo = I_new.copy()
+	I_metadata_undo = I_metadata.copy()
+	namesE_undo = namesE.copy()
+	namesJ_undo = namesJ.copy()
+	if crop_mode=="all":
+		wait_dialog.open()
+		await asyncio.sleep(0.01)
+		refaspect=I_metadata[entry_nr][1]
+		metadatapos=0
+		metadata_total = len(I_metadata)
+		for metadata in I_metadata:
+			if metadata[1]==refaspect and metadata[3]==False:
+				try:
+					I_tmp = Image.open(metadata[2])
+				except:
+					ui.notify(f"Image file ''{metadata[2]}' not found! Custom crop not applied to that photo.")
+				else:
+					ImageOps.exif_transpose(image=I_tmp, in_place=True)
+					I_tmp = ImageOps.cover(image=I_tmp, size=[math.floor(viewp_width*currentzoom),math.floor(viewp_height*currentzoom)], method=Image.Resampling.LANCZOS)
+					I_new[metadatapos] = I_tmp.crop([-viewp_xoff,-viewp_yoff,photowidth-viewp_xoff,photoheight-viewp_yoff])
+					metadata[3] = True
+			metadatapos=metadatapos+1
+			update_progress = metadatapos/metadata_total
+			await asyncio.sleep(0.01)
+		wait_dialog.close()
+	else:
+		try:
+			I_tmp = Image.open(I_metadata[entry_nr][2])
+		except:
+			ui.notify(f"Image file ''{I_metadata[entry_nr][2]}' not found! Custom crop not possible.")
+			return
+		ImageOps.exif_transpose(image=I_tmp, in_place=True)
+		I_tmp = ImageOps.cover(image=I_tmp, size=[math.floor(viewp_width*currentzoom),math.floor(viewp_height*currentzoom)], method=Image.Resampling.LANCZOS)
+		#print(I_tmp.size)
+		I_new[entry_nr] = I_tmp.crop([-viewp_xoff,-viewp_yoff,photowidth-viewp_xoff,photoheight-viewp_yoff])
+		I_metadata[entry_nr][3] = True
+		#print(I_new_new.size)
+	new_undoable_flag = True
+	new_button_undoDisplay.refresh()
+	new_ui_characterlist.refresh()
 
 
 #Extra Functionality
@@ -1384,14 +1760,23 @@ async def adjustaspect(newaspect):
 	global photowidth
 	global photoaspect
 	global I_new
+	global I_metadata
 	global new_undoable_flag
 	global new_updated_flag
+	update_progress = 0
 
 	with ui.dialog().props("persistent") as change_aspect_dialog, ui.card():
-		ui.label("All entries in the photo column will be cleared. This cannot be undone!").style("max-width:300px;")
+		ui.label("All photos will be reloaded and any custom crops will be removed. This cannot be undone!").style("max-width:300px;")
 		with ui.row():
 			ui.button("Change Aspect Ratio",on_click=lambda: change_aspect_dialog.submit(False)).style("width:200px;")
 			ui.button("Cancel",on_click=lambda: change_aspect_dialog.submit(True)).props("color=positive").style("width:200px;")
+
+	with ui.dialog().props("persistent") as wait_dialog, ui.card():
+		with ui.row():
+			ui.spinner()
+			ui.label("Updating...")
+		bar_import_status = ui.linear_progress(value=0,show_value=False).style("width:200px;")
+		ui.timer(0.1,lambda: bar_import_status.set_value(update_progress))
 
 	if I_new:
 		is_abort = await change_aspect_dialog
@@ -1399,10 +1784,33 @@ async def adjustaspect(newaspect):
 		is_abort = False
 	if is_abort:
 		return
+	print("Re-importing in new aspect ratio...")
+	wait_dialog.open()
+	await asyncio.sleep(0.01)
 	photoaspect = newaspect
 	photowidth = math.floor(photoheight*photoaspect)
+	metadatapos = 0
+	I_metadata_new = I_metadata.copy()
+	metadata_total = len(I_metadata)
 	I_new = []
-	I_new_reducenames()
+	for metadata in I_metadata:
+		try:
+			I_tmp = Image.open(metadata[2])
+		except:
+			ui.notify(f"Image file ''{metadata[2]}' not found! Photo removed.")
+			I_metadata_new.pop(metadatapos)
+			namesE.pop(metadatapos)
+			namesJ.pop(metadatapos)
+		else:
+			ImageOps.exif_transpose(image=I_tmp, in_place=True)
+			I_new.append(ImageOps.fit(image=I_tmp, size=[photowidth,photoheight], method=Image.Resampling.LANCZOS, centering=[0.5,0.0]))
+			metadata[3]=False
+			I_metadata_new[metadatapos][3]=False
+			metadatapos=metadatapos+1
+		update_progress=metadatapos/metadata_total
+		await asyncio.sleep(0.01)
+	I_metadata = I_metadata_new.copy()
+	#I_new_reducenames()
 	draw_amasks()
 	set_new_alphamask(aMask_circle)
 	update_imagesample()
@@ -1411,6 +1819,9 @@ async def adjustaspect(newaspect):
 	new_ui_characterlist.refresh()
 	new_button_undoDisplay.refresh()
 	new_ui_siglayout.refresh()
+	wait_dialog.close()
+	print("Re-import complete!")
+	button_set_photoaspect.set_visibility(False)
 
 
 def quick_update_buttons():
@@ -1458,6 +1869,7 @@ def update_imagesample():
 	global nameEoffsetY
 	global nameJoffsetX
 	global nameJoffsetY
+	global oversize_margin
 	global shadowEoffsetX
 	global shadowEoffsetY
 	global shadowJoffsetX
@@ -1474,6 +1886,7 @@ def update_imagesample():
 	nameEoffsetY = slider_nameEoffsety.value
 	nameJoffsetX = slider_nameJoffsetx.value
 	nameJoffsetY = slider_nameJoffsety.value
+	oversize_margin = slider_oversize_margin.value
 	shadowEoffsetX = slider_shadowEoffsetX.value
 	shadowEoffsetY = slider_shadowEoffsetY.value
 	shadowJoffsetX = slider_shadowJoffsetX.value
@@ -1533,6 +1946,8 @@ I_quick_undo = []
 I_quick_bak = []
 I_new = []
 I_new_undo = []
+I_metadata = []
+I_metadata_undo = []
 new_sig_scaled = []
 layout_images = 0
 layout_rows = 0
@@ -1540,6 +1955,7 @@ layout_columns = 0
 layout_pad = 0
 sig01 = 0
 sig02 = 0
+imported_no = 0
 
 custom_columns = 4
 custom_rows = 1
@@ -1571,6 +1987,7 @@ nameJalignX = "left"
 nameJalignY = "bottom"
 nameJoffsetX = 0
 nameJoffsetY = 0
+oversize_margin = 0
 
 ISshadowE = False
 ISshadowJ = False
@@ -1709,7 +2126,7 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 		def quick_ui_imgSettings() -> None:
 			global layout_images_target
 			if I_quick:
-				with ui.button("Re-Scan",on_click=lambda:import_quick_alert()).style("width:200px;"):
+				with ui.button("Re-Scan",on_click=lambda:import_quick_launch()).style("width:200px;"):
 					ui.tooltip("If you have changed any photo files in the folder, use this to update the list of photos.").props("max-width='200px'").classes("default_tooltip")
 			else:
 				ui.button("Scan Folder",on_click=lambda:import_quick_launch()).style("width:200px;")
@@ -1728,7 +2145,7 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 				ui.separator()
 
 				ui.label("02. Confirm layout:")
-				ui.label("Once the list of photos is sorted to your liking, click 'UPDATE LAYOUT'. This will generate a preview of how the photos will be arranged in your signature. Slots marked with 'Padding' will be left empty in the final signature. You can force all photos into a single signature image or spread them out over two. The photos above can still be reordered. - Then hit 'UPDATE LAYOUT' again.").style("max-width:550px;")
+				ui.label("Once the list of photos is sorted to your liking, click 'UPDATE LAYOUT'. This will generate a preview of how the photos will be arranged in your signature. Slots marked with 'Padding' will be left empty in the final signature. You can force all photos into a single signature image or spread them out over two. The photos above can still be reordered. - Then click 'UPDATE LAYOUT' again.").style("max-width:550px;")
 				with ui.row(wrap=True):
 					quick_button_updateLayout()
 					layout_images_target = ui.radio(["Auto", "One Image", "Two Images"], value="Auto", on_change=lambda:force_quicklayout()).props("inline")
@@ -1931,11 +2348,15 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 	with ui.tab_panel("Create New"):
 		ui.label("GENERATE A NEW SIGNATURE FROM SCRATCH.")
 
-		ui.label("First, select the aspect ratio in which your photos will be included in the signature images. If you change this later on, ALL PREVIOUSLY IMPORTED IMAGES WILL BE REMOVED!").style("max-width:550px;")
+		ui.label("First, select the aspect ratio in which your photos will be included in the signature images. If you change this later on, all previously imported photos will be reloaded automatically.").style("max-width:550px;")
 
 		with ui.row().classes("items-center"):
-			select_photoaspect = ui.select([0.5,0.67,0.75,1,1.33,1.5], value=1)
-			ui.button("Set Aspect Ratio", on_click=lambda: adjustaspect(select_photoaspect.value), color="secondary").style("width:200px;")
+			select_photoaspect = ui.select({0.5:"1:2 (Portrait)",0.67:"2:3 (Portrait)",0.75:"3:4 (Portrait)",1:"1:1 (Square)",1.33:"4:3 (Landscape)",1.5:"3:2 (Landscape)"}, value=1, on_change=lambda: button_set_photoaspect.set_visibility(True)).style("width:200px;")
+			#if select_photoaspect.value==photoaspect:
+			#	ui.button("Set Aspect Ratio", color="accent").style("width:200px;").props("disable")
+			#else:
+			button_set_photoaspect = ui.button("Set Aspect Ratio", on_click=lambda: adjustaspect(select_photoaspect.value), color="primary").style("width:200px;")
+			button_set_photoaspect.set_visibility(False)
 
 		ui.separator()
 
@@ -1944,10 +2365,11 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 		with ui.dialog() as help_new_photos_dialog, ui.card():
 			with ui.column().classes("items-center"):
 				ui.icon("o_info", size="100px")
-				ui.label("All photos listed in the photo table will be combined into your signature image(s). You can add photos to the photo table in three ways:").style("max-width:450px;")
-				ui.label("(1) Like in the 'Quick Sig' panel, you can import multiple local images at once. Copy the photos you want to use in your signature into the same folder as this executable (the 'working directory'), then click the 'SCAN FOLDER' button. This will add all image files in the working directory to the list. Supported are .jpg, .png, .jpeg, .JPG, .PNG, and .JPEG image files.").style("max-width:450px;")
-				ui.label("(2) You can import images one by one from anywhere on cour computer. Use the 'Add photo: +' button on the bottom of the list, then browse your files or drag & drop in an image file.").style("max-width:450px;")
-				ui.label("(3) You can import images one by one from the web. Use the 'Add photo: Web' button on the bottom of the list, then enter the URL to an image file.").style("max-width:450px;")
+				ui.label("All photos listed in the photo table will be combined into your signature image(s). You can add photos to the photo table in four ways:").style("max-width:450px;")
+				ui.label("(1) Like in the 'Quick Sig' panel, you can import multiple local images at once. Copy the photos you want to use in your signature into the same folder as this executable (the 'working directory'), then click the 'SCAN FOLDER' button. This will add all image files in the working directory to the table. Supported are .jpg, .png, .jpeg, .JPG, .PNG, and .JPEG image files.").style("max-width:450px;")
+				ui.label("(2) You can import images one by one from anywhere on cour computer. Use the 'Add photo: +' button on the bottom of the table, then browse your files or drag & drop in an image file.").style("max-width:450px;")
+				ui.label("(3) You can import images one by one from the web. Use the 'Add photo: Web' button on the bottom of the table, then enter the URL to an image file.").style("max-width:450px;")
+				ui.label("(4) Users of the DollDreaming forum can import photos directly from their doll directory. For details, click the '?' button next to 'DIRECTORY IMPORT' at the bottom of the table.").style("max-width:450px;")
 				with ui.row():
 					ui.icon("o_announcement",color="primary", size="25px")
 					ui.label("All rows that contain photos will be included in your signature. Rows that contain only text (names/epithets) will be ignored when generating a signature.").style("max-width:350px;")
@@ -1998,10 +2420,24 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 			with ui.column().classes("items-center"):
 				ui.icon("o_info", size="100px")
 				ui.label("You can select the edge/corner of the photo to which names and epithets will automatically align to. Since every font uses slightly different spacing, you can use the 'Offset' horizontal and vertical sliders to fine-tune the position afterwards. Change the 'Sample from entry #' above, to check how your settings look on any of your entries in the photo table.").style("max-width:450px;")
+				ui.label("If a text layer is too wide to fit on the photo, you can squish or shrink it down to fit. Depending on your text layer offsets, it may still go off the page: Adjust the margin to make everything fit again.").style("max-width:450px;")
 				with ui.row():
 					ui.icon("o_announcement",color="primary", size="25px")
-					ui.label("The 'Squish' and 'Shrink' settings above will produce best results with a horizontal 'Offset' of 0.").style("max-width:350px;")
+					ui.label("The margin setting will be ignored if oversized text handling is set to 'Ignore'.").style("max-width:350px;")
 				ui.button("Close", on_click=help_new_alignment_dialog.close, color="positive")
+
+		with ui.dialog() as help_new_directory_dialog, ui.card():
+			with ui.column().classes("items-center"):
+				ui.icon("o_info", size="100px")
+				ui.label("Users of the DollDreaming forum can import photos directly from their doll directory. To do this, you will need to copy the links to your dolls' doll directory pages into the 'doll_directory.txt' file that is located in the same folder as this executable. (Delete the sample text inside the file first.) Put every link you want to enter on a separate line. Save the file, then click the 'DIRECTORY IMPORT' button.").style("max-width:450px;")
+				with ui.row():
+					ui.icon("o_announcement",color="primary", size="25px")
+					ui.label("The directory import is comparatively slow. - If you have your photos available locally, the batch import with 'SCAN FOLDER' will be substantially faster.").style("max-width:350px;")
+				ui.label("If you don't have a 'doll_directory.txt' file, you can create it yourself. Just make sure it's a plain text (.txt) file, preferrably with Unicode (UTF-8) encoding.").style("max-width:450px;")
+				with ui.row():
+					ui.icon("o_announcement",color="primary", size="25px")
+					ui.label("For each doll directory page, you only need to add the link once. Even if you change the photos in the doll directory later, the directory import will always import the up-to-date photos.").style("max-width:350px;")
+				ui.button("Close", on_click=help_new_directory_dialog.close, color="positive")
 
 		
 		@ui.refreshable
@@ -2037,8 +2473,9 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 				with ui.button(icon="o_delete", on_click=lambda: namesJ_clear(), color="secondary").style("width:35px;"):
 					ui.tooltip("Clear all epithets").classes("default_tooltip")
 				#with ui.column().classes("items-center"):
-				#	ui.label("Delete row")
-				ui.label(" ")
+				ui.label("Delete row")
+
+				#ui.label(" ")
 
 				#table of photos & names
 				while new_id<new_table_length:
@@ -2065,7 +2502,12 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 								ui.button(icon="o_expand_less", color="accent").style("width:35px; height:30px;").props("disable")
 							else:
 								ui.button(icon="o_expand_less", on_click=lambda iid=new_id:I_new_moveup(iid)).style("width:35px; height:30px;")
-							ui.element("spacer").style("height:38px;")
+							if I_metadata[new_id][3]:
+								with ui.button(icon="o_crop", on_click=lambda iid=new_id:I_new_cropimage(iid),color="secondary").style("width:35px; height:30px;"):
+									ui.tooltip("Adjust custom crop").props("max-width='200px'").classes("default_tooltip")
+							else:
+								with ui.button(icon="o_crop", on_click=lambda iid=new_id:I_new_cropimage(iid)).style("width:35px; height:30px;"):
+									ui.tooltip("Apply a custom crop").props("max-width='200px'").classes("default_tooltip")
 							if new_id>=len(I_new)-1:
 								ui.button(icon="o_expand_more", color="accent").style("width:35px; height:30px;").props("disable")
 							else:
@@ -2155,6 +2597,14 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 			new_ui_characterlist()
 
 		new_ui_imgSettings()
+
+		#with ui.grid(columns="50px 160px 35px 160px 35px 160px 35px 50px").classes("items-center"):
+		with ui.row():
+			ui.element("spacer").style("width:50px;")
+			with ui.button_group().classes("col-span-3"):
+				with ui.button("Directory Import", icon="o_contact_page",on_click=lambda: directory_import()).style("width:200px;"):
+					ui.tooltip("Import photos from the Doll Directory").props("max-width='200px'").classes("default_tooltip")
+				ui.button(icon="o_help_outline", on_click=help_new_directory_dialog.open, color="positive").style("width:35px;")
 
 
 		def set_colorEmain(colorEmain_new):
@@ -2455,9 +2905,13 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 		
 		with ui.grid(columns = "50px 160px 35px 160px 35px 160px 35px 50px").classes("items-center"):
 			ui.label(" ")
-			with ui.column().classes("col-span-2"):
+			with ui.column().classes("col-span-2 gap-0"):
 				ui.label("How to handle oversized text?")
 				new_handle_oversize = ui.radio(["Squish", "Shrink", "Ignore (Crop)"], value="Squish", on_change=lambda:update_textsample())
+				ui.label("Oversized text margin")
+				with ui.row():
+					slider_oversize_margin = ui.slider(min=0, max=20, value=0, on_change=lambda:update_imagesample()).style("width:160px;")
+					ui.label().bind_text_from(slider_oversize_margin,'value')
 			with ui.column().classes("gap-0"):
 				ui.label("Set alignment for Name")
 				ui.element("spacer").style("height:5px;")
@@ -2711,6 +3165,19 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 				
 ui.run() #comment out for building
 #ui.run(reload=False, port=native.find_open_port()) #comment in for building
+
+## Remove temporary files at the end
+try:
+	tmp_images = os.listdir("./tmp")
+except:
+	print("No temporary files to remove.")
+else:
+	for image in tmp_images:
+		os.remove(f"./tmp/"+image)
+	os.rmdir("./tmp")
+	print("Temporary files removed.")
+#print("Shutdown!")
+
 '''
 Build with
 nicegui-pack --onefile --icon ./icon/DDicon.png --name "DDsiggen_ver.<version number>" DDsiggen.py

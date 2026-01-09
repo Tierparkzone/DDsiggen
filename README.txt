@@ -1,5 +1,5 @@
 DDsiggen - Tierparkzone's Forum Signature Generator
-ver.1.18
+ver.2.08
 
 A python-based program/script that takes multiple individual image files and text inputs to create composite images for use as a signature on web forums. The generated output images by default are set up to meet the signature requirements of the DollDreaming forum at "https://www.dolldreaming.com/". Depending on your settings in the software, the generated output images may not actually fulfill the signature requirements of the DollDreaming forum (or any other forum). Please confirm the properties of the output images yourself before using them as signatures.
 The author of this software is a user of the DollDreaming forum but in no other way affiliated with DollDreaming.
@@ -24,6 +24,8 @@ Generate a signature with custom text and additional options.
 - Set the preferred aspect ratio for your photos
 - Batch import photos from the working directory
 - Import photos one by one from anywhere on your computer or from the web
+- Batch import photos from your DollDreaming doll directory
+- Manually adjust the crop for individual photos or for groups of photos at once
 - Add or import up to two text layers ("name" and "epithet") that will get applied to the photos
 - Reorder photos and text as desired
 - Select one of the provided alpha masks
@@ -58,14 +60,15 @@ DDsiggen_<version No.>_<OS type>        (Working directory)
 |  |
 |  |--<empty>
 |
-|
 |--DDsiggen_<version No.><file type>    (The executable itself - File type is .py, .exe  or none)
 |
-|--epithets.txt             (Text you enter here can be applied to the "epithet" text layer of an image)
+|--doll_directory.txt       (Enter the links to your doll directory entries here)
+|
+|--epithets.txt             (Text you enter here can be applied to the "epithet" text layer of a photo)
 |
 |--LICENSE.txt              (License information)
 |
-|--names.txt                (Text you enter here can be applied to the "name" text layer of an image)
+|--names.txt                (Text you enter here can be applied to the "name" text layer of a photo)
 |
 |--README.txt               (This readme file)
 
@@ -78,9 +81,15 @@ Preparing photos for batch import:
 - Supported file formats are .jpg, .jpeg, .png, .JPG, .JPEG and .PNG.
 - If you skip this step, you will only be able to import images one by one through the "Add photo" buttons in the "Create New" mode.
 
+Preparing doll directory links for import:
+- Copy the links to your dolls' doll directory entries into the "doll_directory.txt" file.
+- Paste each link on a new line.
+- If you skip this step, you will not be able to use the "Directory Import" function
+- The directory import is comparatively slow. If you have your photos available locally, the batch import described above will be substantially faster.
+
 Preparing custom text for import:
 - Enter the text you wish to import into the "names.txt" and "epithets.txt" files. The contents of these files can then be applied to their respective text layers.
-- Each new line in the text file  will be applied to the next photo.
+- Each new line in the text file will be applied to the next photo.
 - Save the text files in Unicode (UTF-8) format if possible.
 - If you skip this step, you will have to enter all text manually inside the program.
 
@@ -107,6 +116,7 @@ Exiting the program:
 - If you use any of the "Exit Application" buttons in program's UI, the terminal window will close automatically. (If the executable/script was launched from terminal, it will return to your default input prompt.) You may now close the browser tab.
 - Closing the terminal window will terminate the program and your browser tab will eventually display a "Connection lost" message. You may now close the browser tab.
 - Simply closing your browser tab will not terminate the program! (By reopening the tab, you may continue where you left off.) Close the terminal window to fully terminate the program.
+- If you terminate the program in any other way than using the "Exit Application" buttons in the program's UI, some temporary files may remain in a "tmp" subfolder inside the working directory. These will get overwritten/cleared the next time you run the program.
 
 Running/packing the Python script:
 - The packing command for PyInstaller / NiceGUI-pack can be found at the bottom of the "DDsiggen.py" script file.
@@ -129,20 +139,14 @@ Known issues:
 Original transparency of photos is discarded:
 If any of the imported photos are PNGs with transparent areas, their original transparency information will be ignored during signature generation. Instead the transparency of the selected alpha mask is applied.
 
-Lag when batch importing a large amount of photos:
-If a large amount of images is imported with the batch import ("Scan Folder" button), the program may appear to hang while "Importing..." is displayed on screen. In such a case, check the output in the terminal window: If the most recent message there is "Importing..." as well, the program is indeed still reading in the photo files. Please wait a while. If the most recent message in the terminal is either "Quick Import Completed!" or "New Import Completed!", refresh your browser tab. Your imported images should now be displayed. The required number of photos to encounter this bug depends on your hardware and the size of your individual photo files. If you import fewer than 30 photos at once, you should not encounter this.
-
 Text outline may appear garbled or spotty:
 Some combinations of font, font size and outline thickness may cause the outline of text to appear garbled or have holes. This may be caused by the font file itself or by how Pillow draws text outlines. Try some different text/outline setting combinations.
-
-Packaged Program may get flagged as virus:
-During beta testing, the packaged executable of this software occasionally got flagged as a virus and quarantined by Windows defender. (This is different from SmartScreen simply preventing it from running.) This should not happen anymore. If your anti-virus gets triggered by this program, do not run it! Instead, please inform me of this through the program's GitHub page (link below). If you still want to run the program, try a different version or run the script (.py) directly in Python.
 
 
 
 Copyright and License Information:
 
-DDsiggen Copyright (c) 2025 Tierparkzone
+DDsiggen Copyright (c) 2025-2026 Tierparkzone
 See the LICENSE for terms and conditions for usage and a DISCLAIMER OF ALL WARRANTIES.
 
 The project for this software can be found at:
