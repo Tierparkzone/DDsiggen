@@ -2,6 +2,10 @@
 # (c) by Tierparkzone
 # This script is provided under the MIT license (see attached 'LICENSE' file).
 
+# macOS packaging support - comment in the below lines before packaging for mac
+#from multiprocessing import freeze_support  # noqa
+#freeze_support()  # noqa
+
 from nicegui import ui, events, app, native
 from PIL import ImageOps, Image, ImageDraw, ImageTransform, ImageFilter, ImageFont
 from pathlib import Path
@@ -16,6 +20,14 @@ import requests
 
 #Version Number
 version_no = "2.08"
+
+# macOS packaging support - comment in the below lines before packaging for mac
+#if getattr(sys, 'frozen', False):
+#	dir_path = os.path.dirname(sys.executable)
+#else:
+#	dir_path = os.path.dirname(os.path.abspath(__file__))
+#print(dir_path)
+#os.chdir(f"{dir_path}/.")
 
 
 

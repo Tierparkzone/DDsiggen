@@ -126,10 +126,10 @@ Running/packing the Python script:
 - To pack the script you will also require the Python package pyinstaller.
 - If you encounter any issues when running or packing the script, try again with the Python and package versions listed below.
 - The script is known to work with:
-   Python        3.13.7
+   Python        3.13.7, 1.13.11
    nicegui       2.24.2
    pillow        11.3.0
-   requests      2.23.5
+   requests      2.32.5
    pyinstaller   6.16.0
 
 
