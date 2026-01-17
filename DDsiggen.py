@@ -19,7 +19,7 @@ import requests
 #import imageio as iio
 
 #Version Number
-version_no = "2.08"
+version_no = "2.09"
 
 # macOS packaging support - comment in the below lines before packaging for mac
 #if getattr(sys, 'frozen', False):
@@ -1509,6 +1509,8 @@ def draw_amasks():
 	global aMask_blrdrc
 	global aMask_skdrec
 	global aMask_blskrc
+	global placeholder_img
+	global placeholder_pad
 
 	aMask_circle = Image.new(mode="L", size=[3*photowidth,3*photoheight], color=0)
 	ImageDraw.Draw(aMask_circle).ellipse(xy=[(4,4),(3*photowidth-5,3*photoheight-5)], fill=255)
@@ -1548,6 +1550,10 @@ def draw_amasks():
 	aMask_blskrc = aMask_blskrc.transform(aMask_blskrc.size,Image.AFFINE,(1,0.1,-60,0,1,0),resample=Image.Resampling.BICUBIC)
 	aMask_blskrc = aMask_blskrc.filter(ImageFilter.GaussianBlur(radius=12.0))
 	aMask_blskrc = ImageOps.contain(image=aMask_blskrc, size=[photowidth,photoheight], method=Image.Resampling.LANCZOS)
+
+	placeholder_img = Image.new(mode="RGB", size=[photowidth,photoheight], color="#ff6065")
+	placeholder_pad = Image.new(mode="RGB", size=[photowidth,photoheight], color="#6b6868")
+
 
 
 #Manually Crop Photos
@@ -1711,7 +1717,7 @@ async def I_new_cropimage(entry_nr):
 		radio_select_overlay = ui.radio(["None","Grid","Circles"],value="None", on_change=lambda e: switchoverlay(e.value)).props("inline")
 		ui.button("Apply to this photo", on_click=lambda: cropimage_dialog.submit("photo")).style("width:200px;")
 		with ui.button("Apply to all", on_click=lambda: cropimage_dialog.submit("all")).style("width:200px;"):
-			ui.tooltip("Apply this crop to all photos with the same size that don't have a custom crop already.").props("max-width='200px'").classes("default_tooltip")
+			ui.tooltip("Apply this crop to all photos of the same size that do not have a custom crop yet").props("max-width='200px'").classes("default_tooltip")
 		ui.button("Cancel", on_click=lambda: cropimage_dialog.submit("abort")).props("color=positive").style("width:200px;")
 
 	with ui.dialog().props("persistent") as wait_dialog, ui.card():
@@ -1831,6 +1837,7 @@ async def adjustaspect(newaspect):
 	new_ui_characterlist.refresh()
 	new_button_undoDisplay.refresh()
 	new_ui_siglayout.refresh()
+	new_ui_aspectsample.refresh()
 	wait_dialog.close()
 	print("Re-import complete!")
 	button_set_photoaspect.set_visibility(False)
@@ -2021,6 +2028,8 @@ aMask_rndrec = []
 aMask_blrdrc = []
 aMask_skdrec = []
 aMask_blskrc = []
+placeholder_img = []
+placeholder_pad = []
 
 
 # Import local files
@@ -2059,15 +2068,15 @@ with ui.header().classes(replace='row items-center') as header:
 	with ui.tabs() as modeSelect:
 		ui.tab("Quick Sig")
 		ui.tab("Create New")
-		ui.tab("Load Config")
+		#ui.tab("Load Config")
 	ui.space()
 	ui.label(f"Tierparkzone's Forum Signature Generator - ver.{version_no}")
 	ui.element("spacer").style("width:25px;")
 	with ui.button(icon="o_nights_stay",color="secondary",on_click=dark_mode.toggle).style("width:40px; height:40px"):
-		ui.tooltip("Toggle Dark Mode").classes("default_tooltip")
+		ui.tooltip("Toggle dark mode").props("max-width='200px'").classes("default_tooltip")
 	ui.element("spacer").style("width:15px;")
 	with ui.button(icon="o_close",color="secondary",on_click=lambda:exit_application()).style("width:40px; height:40px"):
-		ui.tooltip("Exit Application").classes("default_tooltip")
+		ui.tooltip("Exit application").props("max-width='200px'").classes("default_tooltip")
 	ui.element("spacer").style("width:15px;")
 
 with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
@@ -2076,10 +2085,10 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 ## Quick Sig Panel
 
 	with ui.tab_panel("Quick Sig"):
-		ui.label("QUICKLY GENERATE A SIMPLE SIGNATURE.")
+		ui.label("QUICKLY GENERATE A SIMPLE SIGNATURE")
 		with ui.row(wrap=True):
 			ui.label("How to use:")
-			ui.label("Copy the photos that you want to use in your signature into the same folder as this executable, then click 'SCAN FOLDER'. If your photos show up below, you're good to go.").style("max-width:450px;")
+			ui.label("Copy the photos that you want to use in your signature into the same folder as this executable (the 'Working Directory'), then click 'SCAN FOLDER'. If your photos show up below, you're good to go.").style("max-width:450px;")
 		
 		@ui.refreshable
 		def quick_button_undoDisplay () -> None:
@@ -2087,13 +2096,13 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 				ui.button("Undo", icon="o_undo", on_click=lambda:I_quick_undofunc()).style("width:200px;")
 			else:
 				with ui.button("Undo", icon="o_undo", color="accent").style("width:200px;").props("disable"):
-					ui.tooltip("Cannot undo any further.").classes("default_tooltip")
+					ui.tooltip("Cannot undo any further!").props("max-width='200px'").classes("default_tooltip")
 		
 		@ui.refreshable
 		def quick_button_updateLayout() -> None:
 			if quick_updated_flag:
 				with ui.button("Update Layout",color="accent").style("width:200px;").props("disable"):
-					ui.tooltip("Already up to date").classes("default_tooltip")
+					ui.tooltip("Already up to date!").props("max-width='200px'").classes("default_tooltip")
 			else:
 				ui.button("Update Layout",on_click=lambda:generate_quicklayout()).style("width:200px;")
 		
@@ -2102,8 +2111,8 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 			if quick_updated_flag:
 				ui.button("Generate Signature", on_click=lambda:generate_quicksig()).style("width:200px;")
 			else:
-				with ui.button("Generate Signature", color="accent").style("width:200px;"):
-					ui.tooltip("Please update the layout!").classes("default_tooltip")
+				with ui.button("Generate Signature", color="accent").style("width:200px;").props("disable"):
+					ui.tooltip("Please update the layout!").props("max-width='200px'").classes("default_tooltip")
 					
 		@ui.refreshable
 		def quick_button_exportSig() -> None:
@@ -2128,7 +2137,7 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 								ui.button(icon="o_delete", color="accent").style("width:40px;").props("disable")
 							else:
 								with ui.button(icon="o_delete", color="secondary", on_click=lambda iid=idx:I_quick_delete(iid)).style("width:40px;"):
-									ui.tooltip("Remove photo from list").classes("default_tooltip")
+									ui.tooltip("Remove photo from list").props("max-width='200px'").classes("default_tooltip")
 							if idx==len(I_quick)-1:
 								ui.button(icon="o_chevron_right", color="accent").style("width:80px;").props("disable")
 							else:
@@ -2152,12 +2161,12 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 				with ui.row(wrap=True):
 					quick_button_undoDisplay()
 					with ui.button("Reset List", on_click=lambda:I_quick_reset()).style("width:200px;"):
-						ui.tooltip("Reset the list of photos without scanning for new files.").props("max-width='200px'").classes("default_tooltip")
+						ui.tooltip("Reset the list of photos without scanning for new files").props("max-width='200px'").classes("default_tooltip")
 
 				ui.separator()
 
 				ui.label("02. Confirm layout:")
-				ui.label("Once the list of photos is sorted to your liking, click 'UPDATE LAYOUT'. This will generate a preview of how the photos will be arranged in your signature. Slots marked with 'Padding' will be left empty in the final signature. You can force all photos into a single signature image or spread them out over two. The photos above can still be reordered. - Then click 'UPDATE LAYOUT' again.").style("max-width:550px;")
+				ui.label("Once the list of photos is sorted to your liking, click 'UPDATE LAYOUT'. This will generate a preview of how the photos will be arranged in your signature. Slots marked with 'Padding' will be left empty in the final signature. You can force all photos into a single signature image or spread them out over two. If you reorder the photos above, click 'UPDATE LAYOUT' again.").style("max-width:550px;")
 				with ui.row(wrap=True):
 					quick_button_updateLayout()
 					layout_images_target = ui.radio(["Auto", "One Image", "Two Images"], value="Auto", on_change=lambda:force_quicklayout()).props("inline")
@@ -2226,7 +2235,7 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 				ui.separator()
 
 				ui.label("03. Select alpha mask:")
-				ui.label("Chose what appearance the individual photos should have in your signature. (Black areas will become transparent.)").style("max-width:550px;")
+				ui.label("Choose a shape for the individual photos in your signature. (Black areas will become transparent.)").style("max-width:550px;")
 
 				def AMset(AMvalue):
 					global select_alphamask
@@ -2353,14 +2362,18 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 				
 		quick_ui_sigDisplay()
 		quick_ui_sigExport()
-
+		ui.element("spacer").style("height:200px;")
 
 ## Create New Panel
 		
 	with ui.tab_panel("Create New"):
-		ui.label("GENERATE A NEW SIGNATURE FROM SCRATCH.")
+		ui.label("GENERATE A NEW SIGNATURE FROM SCRATCH")
 
-		ui.label("First, select the aspect ratio in which your photos will be included in the signature images. If you change this later on, all previously imported photos will be reloaded automatically.").style("max-width:550px;")
+		ui.label("First, select the aspect ratio for the photos that will be included in your signature. If you change this later on, all previously imported photos will be reloaded automatically.").style("max-width:550px;")
+
+		@ui.refreshable
+		def new_ui_aspectsample():
+			ui.image(placeholder_img).props(f"width={math.floor(60*photoaspect)}px height={60}px")
 
 		with ui.row().classes("items-center"):
 			select_photoaspect = ui.select({0.5:"1:2 (Portrait)",0.67:"2:3 (Portrait)",0.75:"3:4 (Portrait)",1:"1:1 (Square)",1.33:"4:3 (Landscape)",1.5:"3:2 (Landscape)"}, value=1, on_change=lambda: button_set_photoaspect.set_visibility(True)).style("width:200px;")
@@ -2369,6 +2382,8 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 			#else:
 			button_set_photoaspect = ui.button("Set Aspect Ratio", on_click=lambda: adjustaspect(select_photoaspect.value), color="primary").style("width:200px;")
 			button_set_photoaspect.set_visibility(False)
+			ui.label("Current Aspect Ratio:")
+			new_ui_aspectsample()
 
 		ui.separator()
 
@@ -2378,64 +2393,64 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 			with ui.column().classes("items-center"):
 				ui.icon("o_info", size="100px")
 				ui.label("All photos listed in the photo table will be combined into your signature image(s). You can add photos to the photo table in four ways:").style("max-width:450px;")
-				ui.label("(1) Like in the 'Quick Sig' panel, you can import multiple local images at once. Copy the photos you want to use in your signature into the same folder as this executable (the 'working directory'), then click the 'SCAN FOLDER' button. This will add all image files in the working directory to the table. Supported are .jpg, .png, .jpeg, .JPG, .PNG, and .JPEG image files.").style("max-width:450px;")
-				ui.label("(2) You can import images one by one from anywhere on cour computer. Use the 'Add photo: +' button on the bottom of the table, then browse your files or drag & drop in an image file.").style("max-width:450px;")
-				ui.label("(3) You can import images one by one from the web. Use the 'Add photo: Web' button on the bottom of the table, then enter the URL to an image file.").style("max-width:450px;")
+				ui.label("(1) As in the 'Quick Sig' panel, you can import multiple local photos at once. Copy the photos you want to use in your signature into the same folder as this executable (the 'working directory'), then click the 'SCAN FOLDER' button. This will add all image files in the working directory to the table. Supported are .jpg, .png, .jpeg, .JPG, .PNG, and .JPEG image files.").style("max-width:450px;")
+				ui.label("(2) You can import photos one by one from anywhere on your computer. Use the 'Add photo: +' button at the bottom of the table, then browse and select your files or drag & drop them into the window.").style("max-width:450px;")
+				ui.label("(3) You can import images one by one from the web. Use the 'Add photo: Web' button at the bottom of the table, then enter the URL to your image file.").style("max-width:450px;")
 				ui.label("(4) Users of the DollDreaming forum can import photos directly from their doll directory. For details, click the '?' button next to 'DIRECTORY IMPORT' at the bottom of the table.").style("max-width:450px;")
 				with ui.row():
 					ui.icon("o_announcement",color="primary", size="25px")
-					ui.label("All rows that contain photos will be included in your signature. Rows that contain only text (names/epithets) will be ignored when generating a signature.").style("max-width:350px;")
+					ui.label("All rows that contain photos will be included in your signature. Rows that contain only text will be ignored when generating a signature.").style("max-width:350px;")
 				ui.button("Close", on_click=help_new_photos_dialog.close, color="positive")
 
 		with ui.dialog() as help_new_names_dialog, ui.card():
 			with ui.column().classes("items-center"):
 				ui.icon("o_info", size="100px")
-				ui.label("You can add text in the name column that will be be applied on top of your photos. This could be the name of the character in the photo, but effectively you can use it for any short string of text. If there is a photo present in the photo column, you can use the 'Add/edit name' button in the corresponding row to enter the name text.").style("max-width:450px;")
+				ui.label("You can add text in the name column that will be applied on top of your photos. This could be the name of the character in the photo, but effectively you can use it for any short string of text. If there is a photo present in the photo column, you can use the 'Add/edit name' button in the corresponding row to enter the name text.").style("max-width:450px;")
 				with ui.row():
 					ui.icon("o_announcement",color="primary", size="25px")
-					ui.label("The text may not contain any line breaks. Too long text strings may not get applied correctly.").style("max-width:350px;")
+					ui.label("The text may not contain any line breaks. Text strings that are too long may not get applied correctly.").style("max-width:350px;")
 				ui.label("If you don't want to enter names into the table one by one, you can import them from a text file instead:").style("max-width:450px;")
 				ui.label("You can enter the names you want to use into the 'names.txt' text file that is located in the same folder as this executable. (Delete the sample text inside the file first.) Put every name you want to enter on a separate line. Save the file, then click the 'READ NAMES.TXT' button.").style("max-width:450px;")
-				ui.label("If you don't have a 'names.txt' file, you can create it yourself. Just make sure it's a plain text (.txt) file, preferrably with Unicode (UTF-8) encoding.").style("max-width:450px;")
+				ui.label("If you don't have a 'names.txt' file, you can create one yourself. Just make sure it's a plain text file (.txt), preferrably with Unicode (UTF-8) encoding.").style("max-width:450px;")
 				with ui.row():
 					ui.icon("o_announcement",color="primary", size="25px")
-					ui.label("Rows that contain only text (names/epithets) will be ignored when generating a signature.").style("max-width:350px;")
+					ui.label("Rows that contain only text and no photos will be ignored when generating a signature.").style("max-width:350px;")
 				ui.button("Close", on_click=help_new_names_dialog.close, color="positive")
 
 		with ui.dialog() as help_new_epithets_dialog, ui.card():
 			with ui.column().classes("items-center"):
 				ui.icon("o_info", size="100px")
-				ui.label("You can add text in the epithet column that will be be applied on top of your photos. This works just the same as for the name text. The epithet is intended to give you a second text layer to add onto the name. It can be used for any short string of text, e.g. to add a nickname or epithet, to split the first and last name between layers or to write the name in an alternate script.  If there is a photo present in the photo column, you can use the 'Add/edit epithet' button in the corresponding row to enter the epithet text.").style("max-width:450px;")
+				ui.label("You can add text in the epithet column that will be applied on top of your photos. This works just the same as for the name text. The epithet is intended to give you a second text layer to add onto the name. It can be used for any short string of text, (e.g. to add a nickname or epithet, to split the first and last name between layers, or to write the name in an alternate script).  If there is a photo present in the photo column, you can use the 'Add/edit epithet' button in the corresponding row to enter the epithet text.").style("max-width:450px;")
 				with ui.row():
 					ui.icon("o_announcement",color="primary", size="25px")
-					ui.label("The text may not contain any line breaks. Too long text strings may not get applied correctly.").style("max-width:350px;")
+					ui.label("The text may not contain any line breaks. Text strings that are too long may not get applied correctly.").style("max-width:350px;")
 				ui.label("If you don't want to enter epithets into the table one by one, you can import them from a text file instead:").style("max-width:450px;")
 				ui.label("You can enter the epithets you want to use into the 'epithets.txt' text file that is located in the same folder as this executable. (Delete the sample text inside the file first.) Put every epithet you want to enter on a separate line. Save the file, then click the 'READ EPITHETS.TXT' button.").style("max-width:450px;")
-				ui.label("If you don't have an 'epithets.txt' file, you can create it yourself. Just make sure it's a plain text (.txt) file, preferrably with Unicode (UTF-8) encoding.").style("max-width:450px;")
+				ui.label("If you don't have an 'epithets.txt' file, you can create one yourself. Just make sure it's a plain text file (.txt), preferrably with Unicode (UTF-8) encoding.").style("max-width:450px;")
 				with ui.row():
 					ui.icon("o_announcement",color="primary", size="25px")
-					ui.label("Rows that contain only text (names/epithets) will be ignored when generating a signature.").style("max-width:350px;")
+					ui.label("Rows that contain only text and no photos will be ignored when generating a signature.").style("max-width:350px;")
 				ui.button("Close", on_click=help_new_epithets_dialog.close, color="positive")
 
 		with ui.dialog() as help_new_fonts_dialog, ui.card():
 			with ui.column().classes("items-center"):
 				ui.icon("o_info", size="100px")
-				ui.label("You can select which fonts to apply to your name and epithet texts. The application comes bundled with a few fonts in the 'fonts' subfolder.").style("max-width:450px;")
-				ui.label("If you would like to use other fonts, you can copy any of your own font files into the 'fonts' subfolder and then click on 'SCAN FONTS' below. Supported are .ttf, .otf, .TTF and .OTF font files.").style("max-width:450px;")
+				ui.label("You can select which fonts to apply to your name and epithet texts. The program comes bundled with a few fonts in the 'fonts' subfolder.").style("max-width:450px;")
+				ui.label("If you would like to use other fonts, you can copy any of your own font files into the 'fonts' subfolder and then click on 'SCAN FONTS' below. Supported are .ttf, .otf, .TTF, and .OTF font files.").style("max-width:450px;")
 				ui.button("Scan Fonts", on_click=lambda: rescan_fonts())
 				with ui.row():
 					ui.icon("o_announcement",color="primary", size="25px")
-					ui.label("If you're using non-alphanumeric scripts (e.g. Chinese, Japanese, Korean, ...)' as names/epithets, make sure you use a font that supports the corresponding script. The fonts bundled with this application support Japanese scripts, but please provide your own font(s) if you wish to use other scripts. If glyphs in the sample images below appear garbled, missing or as rectangles, this usually indicates that the selected font does not support the current script.").style("max-width:350px;")
+					ui.label("If using non-alphanumeric scripts (e.g. Chinese, Japanese, Korean, etc.) for names/epithets, be sure to use a font that supports the corresponding script. The fonts bundled with this application support Japanese scripts, but please provide your own font(s) if you wish to use other scripts. If glyphs in the sample images appear garbled, missing or as rectangles, this usually indicates that the selected font does not support the current script.").style("max-width:350px;")
 				ui.button("Close", on_click=help_new_fonts_dialog.close, color="positive")
 
 		with ui.dialog() as help_new_alignment_dialog, ui.card():
 			with ui.column().classes("items-center"):
 				ui.icon("o_info", size="100px")
-				ui.label("You can select the edge/corner of the photo to which names and epithets will automatically align to. Since every font uses slightly different spacing, you can use the 'Offset' horizontal and vertical sliders to fine-tune the position afterwards. Change the 'Sample from entry #' above, to check how your settings look on any of your entries in the photo table.").style("max-width:450px;")
-				ui.label("If a text layer is too wide to fit on the photo, you can squish or shrink it down to fit. Depending on your text layer offsets, it may still go off the page: Adjust the margin to make everything fit again.").style("max-width:450px;")
+				ui.label("You can select the edge/corner of the photo to which names and epithets will automatically align. Since every font uses slightly different spacing, you can use the 'Offset' horizontal and vertical sliders to fine-tune the position afterwards. Change the 'Sample From Entry #' above, to check how your settings look on any of your entries in the photo table.").style("max-width:450px;")
+				ui.label("If a text layer is too wide to fit on the photo, you can squish or shrink it down to fit. Depending on your text layer offsets, it may still go off the page. In that case, adjust the margin to make everything fit again.").style("max-width:450px;")
 				with ui.row():
 					ui.icon("o_announcement",color="primary", size="25px")
-					ui.label("The margin setting will be ignored if oversized text handling is set to 'Ignore'.").style("max-width:350px;")
+					ui.label("The margin setting will be ignored if 'Oversized Text Handling' is set to 'Ignore'.").style("max-width:350px;")
 				ui.button("Close", on_click=help_new_alignment_dialog.close, color="positive")
 
 		with ui.dialog() as help_new_directory_dialog, ui.card():
@@ -2445,10 +2460,10 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 				with ui.row():
 					ui.icon("o_announcement",color="primary", size="25px")
 					ui.label("The directory import is comparatively slow. - If you have your photos available locally, the batch import with 'SCAN FOLDER' will be substantially faster.").style("max-width:350px;")
-				ui.label("If you don't have a 'doll_directory.txt' file, you can create it yourself. Just make sure it's a plain text (.txt) file, preferrably with Unicode (UTF-8) encoding.").style("max-width:450px;")
+				ui.label("If you don't have a 'doll_directory.txt' file, you can create one yourself. Just make sure it's a plain text file (.txt), preferrably with Unicode (UTF-8) encoding.").style("max-width:450px;")
 				with ui.row():
 					ui.icon("o_announcement",color="primary", size="25px")
-					ui.label("For each doll directory page, you only need to add the link once. Even if you change the photos in the doll directory later, the directory import will always import the up-to-date photos.").style("max-width:350px;")
+					ui.label("For each doll directory page, you only need to add the link once. Even if you change the photos in the doll directory later, the directory import will always import the most up-to-date photos.").style("max-width:350px;")
 				ui.button("Close", on_click=help_new_directory_dialog.close, color="positive")
 
 		
@@ -2456,10 +2471,10 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 		def new_button_undoDisplay() -> None:
 			if new_undoable_flag:
 				with ui.button(icon="o_undo", on_click=lambda:I_new_undofunc()).style("width:50px;"):
-					ui.tooltip("Undo").classes("default_tooltip")
+					ui.tooltip("Undo").props("max-width='200px'").classes("default_tooltip")
 			else:
 				with ui.button(icon="o_undo", color="accent").style("width:50px;").props("disable"):
-					ui.tooltip("Cannot undo any further.").classes("default_tooltip")
+					ui.tooltip("Cannot undo any further!").props("max-width='200px'").classes("default_tooltip")
 
 		@ui.refreshable
 		def new_ui_characterlist() -> None:
@@ -2473,21 +2488,20 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 				with ui.column().classes("items-center"):
 					ui.label("Photo")
 				with ui.button(icon="o_delete", on_click=lambda: I_new_clear(), color="secondary").style("width:35px;"):
-					ui.tooltip("Clear all photos").classes("default_tooltip")
+					ui.tooltip("Clear all photos").props("max-width='200px'").classes("default_tooltip")
 				with ui.row().classes("items-center"):
 					ui.space()
 					ui.label("Name")
 				with ui.button(icon="o_delete", on_click=lambda: namesE_clear(), color="secondary").style("width:35px;"):
-					ui.tooltip("Clear all names").classes("default_tooltip")
+					ui.tooltip("Clear all names").props("max-width='200px'").classes("default_tooltip")
 				with ui.row().classes("items-center"):
 					ui.space()
 					ui.label("Epithet")
 				with ui.button(icon="o_delete", on_click=lambda: namesJ_clear(), color="secondary").style("width:35px;"):
-					ui.tooltip("Clear all epithets").classes("default_tooltip")
+					ui.tooltip("Clear all epithets").props("max-width='200px'").classes("default_tooltip")
 				#with ui.column().classes("items-center"):
-				ui.label("Delete row")
-
-				#ui.label(" ")
+				#ui.label("Delete row")
+				ui.label(" ")
 
 				#table of photos & names
 				while new_id<new_table_length:
@@ -2498,13 +2512,13 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 							ui.button(icon="o_expand_less", color="accent").style("width:50px;").props("disable")
 						else:
 							with ui.button(icon="o_expand_less", on_click=lambda iid=new_id:row_new_moveup(iid)).style("width:50px;"):
-								ui.tooltip("Move entire row").props("max-width='200px'").classes("default_tooltip")
+								ui.tooltip("Move entire row up").props("max-width='200px'").classes("default_tooltip")
 						ui.label(new_id+1)
 						if new_id>=new_table_length-1 or new_id>=len(I_new)-1:
 							ui.button(icon="o_expand_more", color="accent").style("width:50px;").props("disable")
 						else:
 							with ui.button(icon="o_expand_more", on_click=lambda iid=new_id:row_new_movedn(iid)).style("width:50px;"):
-								ui.tooltip("Move entire row").props("max-width='200px'").classes("default_tooltip")
+								ui.tooltip("Move entire row down").props("max-width='200px'").classes("default_tooltip")
 
 					#buttons to move images
 					if len(I_new)>new_id:
@@ -2519,7 +2533,7 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 									ui.tooltip("Adjust custom crop").props("max-width='200px'").classes("default_tooltip")
 							else:
 								with ui.button(icon="o_crop", on_click=lambda iid=new_id:I_new_cropimage(iid)).style("width:35px; height:30px;"):
-									ui.tooltip("Apply a custom crop").props("max-width='200px'").classes("default_tooltip")
+									ui.tooltip("Apply custom crop").props("max-width='200px'").classes("default_tooltip")
 							if new_id>=len(I_new)-1:
 								ui.button(icon="o_expand_more", color="accent").style("width:35px; height:30px;").props("disable")
 							else:
@@ -2529,9 +2543,9 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 							ui.label("Add Photo:")
 							with ui.button_group():
 								with ui.button(icon="o_add_circle_outline", on_click=lambda: import_local()).style("width:65px; height:65px;"):
-									ui.tooltip("Import a single image stored on your PC.").props("max-width='200px'").classes("default_tooltip")
+									ui.tooltip("Import a single image stored on your PC").props("max-width='200px'").classes("default_tooltip")
 								with ui.button(icon="o_language", on_click=lambda: import_from_url()).style("width:65px; height:65px;"):
-									ui.tooltip("Import a single image from the web.").props("max-width='200px'").classes("default_tooltip")
+									ui.tooltip("Import a single image from the web").props("max-width='200px'").classes("default_tooltip")
 						ui.label(" ")
 					else:
 						ui.label("No Photo")
@@ -2548,7 +2562,7 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 							else:
 								ui.button(icon="o_expand_less", on_click=lambda iid=new_id:namesE_moveup(iid)).style("width:35px; height:30px;")
 							with ui.button(icon="o_edit", on_click=lambda iid=new_id:I_new_renameE(iid)).style("width:35px; height:30px;"):
-								ui.tooltip("Add/edit name").classes("default_tooltip")
+								ui.tooltip("Add/edit name").props("max-width='200px'").classes("default_tooltip")
 							if new_id>=len(namesE)-1:
 								ui.button(icon="o_expand_more", color="accent").style("width:35px; height:30px;").props("disable")
 							else:
@@ -2568,7 +2582,7 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 							else:
 								ui.button(icon="o_expand_less", on_click=lambda iid=new_id:namesJ_moveup(iid)).style("width:35px; height:30px;")
 							with ui.button(icon="o_edit", on_click=lambda iid=new_id:I_new_renameJ(iid)).style("width:35px; height:30px;"):
-								ui.tooltip("Add/edit epithet").classes("default_tooltip")
+								ui.tooltip("Add/edit epithet").props("max-width='200px'").classes("default_tooltip")
 							if new_id>=len(namesJ)-1:
 								ui.button(icon="o_expand_more", color="accent").style("width:35px; height:30px;").props("disable")
 							else:
@@ -2580,7 +2594,7 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 					# button to delete row
 					if len(I_new)>new_id:
 						with ui.button(icon="o_delete", on_click=lambda iid=new_id:row_new_delete(iid), color="secondary").style("width:50px; height:50px;"):
-							ui.tooltip("Remove entire row").classes("default_tooltip")
+							ui.tooltip("Delete entire row").props("max-width='200px'").classes("default_tooltip")
 					else:
 						ui.button(icon="o_delete", color="accent").style("width:50px; height:50px;").props("disable")
 					new_id=new_id+1
@@ -2595,15 +2609,15 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 				ui.label(" ")
 				with ui.button_group().classes("col-span-2"):
 					with ui.button("Scan Folder",on_click=lambda:import_new_launch()).style("width:178px;"):
-						ui.tooltip("Scan for images in the working directory.").props("max-width='200px'").classes("default_tooltip")
+						ui.tooltip("Scan the working directory for photos").props("max-width='200px'").classes("default_tooltip")
 					ui.button(icon="o_help_outline", on_click=help_new_photos_dialog.open, color="positive").style("width:35px;")
 				with ui.button_group().classes("col-span-2"):
 					with ui.button("Read 'names.txt'",on_click=lambda:import_namesE()).style("width:178px;"):
-						ui.tooltip("Read in names from the 'names.txt' file.").props("max-width='200px'").classes("default_tooltip")
+						ui.tooltip("Import names from the text file").props("max-width='200px'").classes("default_tooltip")
 					ui.button(icon="o_help_outline", on_click=help_new_names_dialog.open, color="positive").style("width:35px;")
 				with ui.button_group().classes("col-span-2"):
 					with ui.button("Read 'epithets.txt'",on_click=lambda:import_namesJ()).style("width:178px;"):
-						ui.tooltip("Read in text from the 'epithets.txt' file.").props("max-width='200px'").classes("default_tooltip")
+						ui.tooltip("Import epithets from the text file").props("max-width='200px'").classes("default_tooltip")
 					ui.button(icon="o_help_outline", on_click=help_new_epithets_dialog.open, color="positive").style("width:35px;")
 				new_button_undoDisplay()
 			new_ui_characterlist()
@@ -2651,7 +2665,7 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 
 		ui.separator()
 
-		ui.label("Chose what appearance the individual photos should have in your signature. (Black areas will become transparent.)").style("max-width:550px;")
+		ui.label("Choose a shape for the individual photos in your signature. (Black areas will become transparent.)").style("max-width:550px;")
 
 		def set_new_alphamask(new_aMask_select):
 			global new_alphamask
@@ -2735,11 +2749,11 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 				fontJ = ui.select(fonts_list, value=False, on_change=lambda:update_textsample()).style("width:200px;")
 			#return(fontJ)
 
-		ui.label("If you want to apply name and/or epithet text to your photos, select a font below. Selecting 'false' means that no corresponding text will be applied.").style("max-width:550px;")
+		ui.label("If you want to apply a name and/or epithet to your photos, select a font below. Selecting 'false' means that no corresponding text will be applied.").style("max-width:550px;")
 		with ui.grid(columns="50px 160px 35px 160px 35px 160px 35px 50px"):#.classes("items-center"):
 			ui.label(" ")
 			with ui.column().classes("col-span-2 gap-0"):
-				ui.label("Which layer on top?")
+				ui.label("Top Layer:")
 				names_priority = ui.radio(["Name", "Epithet"], value="Name", on_change=lambda:update_textsample())#.props("inline")
 			new_ui_fontEselect()
 			new_ui_fontJselect()
@@ -2757,7 +2771,7 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 					with ui.button("Text Color", icon="o_format_color_text").style("width:150px;"):
 						ui.color_picker(on_pick=lambda e: set_colorJmain(e.color))
 					with ui.button(icon="o_content_copy", on_click=lambda:set_colorJmain(colorEmain), color="positive").style("width:50px;"):
-						ui.tooltip("Copy current fill color from names").props("max-width='200px'").classes("default_tooltip")
+						ui.tooltip("Copy current text color from names").props("max-width='200px'").classes("default_tooltip")
 			ui.label(" ")
 	
 			ui.label(" ")
@@ -2878,7 +2892,7 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 			with ui.grid(columns="50px 160px 35px 160px 35px 160px 35px 50px"): #.classes("items-center"):
 				ui.label(" ")
 				with ui.column().classes("col-span-2 gap-0"):
-					ui.label("Sample from entry #:")
+					ui.label("Sample From Entry #:")
 					if new_table_index:
 						select_textsample_no = ui.select(new_table_index, value=textsample_no, on_change=lambda:update_textsample())
 					else:
@@ -2918,14 +2932,14 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 		with ui.grid(columns = "50px 160px 35px 160px 35px 160px 35px 50px").classes("items-center"):
 			ui.label(" ")
 			with ui.column().classes("col-span-2 gap-0"):
-				ui.label("How to handle oversized text?")
+				ui.label("Oversized Text Handling:")
 				new_handle_oversize = ui.radio(["Squish", "Shrink", "Ignore (Crop)"], value="Squish", on_change=lambda:update_textsample())
-				ui.label("Oversized text margin")
+				ui.label("Oversized Text Margin:")
 				with ui.row():
 					slider_oversize_margin = ui.slider(min=0, max=20, value=0, on_change=lambda:update_imagesample()).style("width:160px;")
 					ui.label().bind_text_from(slider_oversize_margin,'value')
 			with ui.column().classes("gap-0"):
-				ui.label("Set alignment for Name")
+				ui.label("Name Alignment:")
 				ui.element("spacer").style("height:5px;")
 				with ui.row().classes("gap-0"):
 					ui.button(icon="o_north_west", on_click=lambda:set_nameEalign("left","top")).style("width:40px; height:40px;")
@@ -2952,7 +2966,7 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 				ui.element("spacer").style("height:5px;")
 				ui.label().bind_text_from(slider_nameEoffsety,'value')
 			with ui.column().classes("gap-0"):
-				ui.label("Set alignment for Epithet")
+				ui.label("Epithet Alignment:")
 				ui.element("spacer").style("height:5px;")
 				with ui.row().classes("gap-0"):
 					ui.button(icon="o_north_west", on_click=lambda:set_nameJalign("left","top")).style("width:40px; height:40px;")
@@ -3023,11 +3037,11 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 			check_textEglow = ui.checkbox("Name Glow",on_change=lambda e:set_nameEglow(e.value))
 			with ui.button(icon="o_format_color_fill"):
 				ui.color_picker(on_pick=lambda e: set_colorEglow(e.color))
-				ui.tooltip("Name Glow Color").classes("default_tooltip")
+				ui.tooltip("Name glow color").props("max-width='200px'").classes("default_tooltip")
 			check_textJglow = ui.checkbox("Epithet Glow",on_change=lambda e:set_nameJglow(e.value))
 			with ui.button(icon="o_format_color_fill"):
 				ui.color_picker(on_pick=lambda e: set_colorJglow(e.color))
-				ui.tooltip("Epithet Glow Color").classes("default_tooltip")
+				ui.tooltip("Epithet glow color").props("max-width='200px'").classes("default_tooltip")
 			ui.label("")
 			ui.label("")
 			with ui.column().classes("col-span-2"):
@@ -3088,15 +3102,15 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 				with ui.row():
 					imgN=0
 					imgY=1
-					with ui.column().classes("gap-0 border p-1"):
+					with ui.column().classes("border p-1"):
 						while imgY<=new_layout_rows:
 							imgX=1
-							with ui.row(wrap=False).classes("gap-0"):
+							with ui.row(wrap=False):
 								while imgX<=new_layout_columns:
 									if imgN<img_unpadded:
-										ui.icon("square",color="primary", size=f"{imgsizeX}px")#.style(f"width:{imgsize}px; height:{imgsize}px;")
+										ui.image(placeholder_img).props(f"width={imgsizeX}px height={imgsizeY}px no-transition no spinner")
 									else:
-										ui.icon("square",color="positive", size=f"{imgsizeX}px")#.style(f"width:{imgsize}px; height:{imgsize}px;")
+										ui.image(placeholder_pad).props(f"width={imgsizeX}px height={imgsizeY}px no-transition no spinner")
 									imgN=imgN+1
 									imgX=imgX+1
 							imgY=imgY+1
@@ -3111,21 +3125,17 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 						ui.label(f"{new_layout_pad} padding on the final image (marked in grey).")
 						ui.label(f"Signature image size: {imgsizeXX}px by {imgsizeYY}px")
 						ui.label(f"Individual photo size: {imgsizeX}px by {imgsizeY}px")
-						if photoaspect != 1:
-							with ui.row().classes("items-center"):
-								ui.icon("o_announcement",color="primary", size="25px")
-								ui.label("This preview does not accurately display the photo aspect ratio!")
 						if new_layout_images>2:
 							with ui.row().classes("items-center"):
 								ui.icon("o_announcement",color="primary", size="25px")
-								ui.label("You can only use a maximum of two images at a time in your signature!")
+								ui.label("You can only use a maximum of two images at a time for your signature!")
 
 		@ui.refreshable
 		def new_ui_siglayout() -> None:
 			with ui.row().classes("items-center"):
 				if new_updated_flag:
 					with ui.button("Update Layout", color="accent").style("width:200px;").props("disable"):
-						ui.tooltip("Already up to date").classes("default_tooltip")
+						ui.tooltip("Already up to date!").props("max-width='200px'").classes("default_tooltip")
 				else:
 					ui.button("Update Layout", on_click=lambda:generate_newlayout(new_image_layout.value, custom_columns, custom_rows)).style("width:200px;")
 				if new_image_layout.value == "Custom":
@@ -3134,12 +3144,12 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 			new_ui_layoutSample()
 			ui.separator()
 
-			ui.label("If all above settings are to your liking, generate a preview of the final signature images.").style("max-width:550px;")
+			ui.label("If all of the above settings are to your liking, generate a preview of the final signature image(s).").style("max-width:550px;")
 			if new_updated_flag:
 				ui.button("Generate Signature", on_click=lambda:generate_newsig()).style("width:200px;")
 			else:
 				with ui.button("Generate Signature", color="accent").style("width:200px;").props("disable"):
-						ui.tooltip("Please update the layout!").classes("default_tooltip")
+						ui.tooltip("Please update the layout!").props("max-width='200px'").classes("default_tooltip")
 
 		new_ui_siglayout()
 
@@ -3169,11 +3179,12 @@ with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full"):
 
 
 ## Load Config Panel
-		
+	'''
 	with ui.tab_panel("Load Config"):
-		ui.label("LOAD AND EDIT A PREVIOUSLY SAVED CONFIG FILE.")
+		ui.label("LOAD AND EDIT A PREVIOUSLY SAVED CONFIG FILE")
 		
-		ui.label("This function is not yet available.")
+		ui.label("This function is not available yet.")
+	'''
 				
 ui.run() #comment out for building
 #ui.run(reload=False, port=native.find_open_port()) #comment in for building
