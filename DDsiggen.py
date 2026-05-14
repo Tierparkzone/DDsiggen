@@ -20,7 +20,7 @@ import requests
 #import imageio as iio
 
 #Version Number
-version_no = "3.06"
+version_no = "3.08"
 
 # macOS packaging support - comment in the below lines before packaging for mac
 #if getattr(sys, 'frozen', False):
@@ -563,13 +563,6 @@ def rescan_fonts():
 #Rename
 
 async def I_new_renameE(current_idx) -> None:
-
-	with ui.dialog().props("persistent") as rename_dialog, ui.card().classes("bg-[#ffffff] dark:bg-[#18191e]"):
-		newname = ui.input(label="Enter new name:").style("width:200px;")
-		ui.button("Set New Name",on_click=lambda: rename_dialog.submit(newname.value)).style("width:200px;")
-		ui.button("Clear Name",on_click=lambda: rename_dialog.submit("")).props("color=positive").style("width:200px;")
-		ui.button("Cancel",on_click=lambda: rename_dialog.submit(currentnameE)).props("color=positive").style("width:200px;")
-
 	global new_updated_flag
 	global new_undoable_flag
 	global I_new
@@ -580,8 +573,14 @@ async def I_new_renameE(current_idx) -> None:
 	global namesE_undo
 	global namesJ
 	global namesJ_undo
-
 	currentnameE = namesE[current_idx]
+
+	with ui.dialog().props("persistent") as rename_dialog, ui.card().classes("bg-[#ffffff] dark:bg-[#18191e]"):
+		newname = ui.input(label="Enter new name:", value=currentnameE).style("width:200px;")
+		ui.button("Set New Name",on_click=lambda: rename_dialog.submit(newname.value)).style("width:200px;")
+		ui.button("Clear Name",on_click=lambda: rename_dialog.submit("")).props("color=positive").style("width:200px;")
+		ui.button("Cancel",on_click=lambda: rename_dialog.submit(currentnameE)).props("color=positive").style("width:200px;")
+
 	newnameE = await rename_dialog
 	if newnameE!=currentnameE:
 		#new_updated_flag = False
@@ -598,13 +597,6 @@ async def I_new_renameE(current_idx) -> None:
 
 
 async def I_new_renameJ(current_idx) -> None:
-
-	with ui.dialog().props("persistent") as rename_dialog, ui.card().classes("bg-[#ffffff] dark:bg-[#18191e]"):
-		newname = ui.input(label="Enter new epithet:").style("width:200px;")
-		ui.button("Set New Epithet",on_click=lambda: rename_dialog.submit(newname.value)).style("width:200px;")
-		ui.button("Clear Epithet",on_click=lambda: rename_dialog.submit("")).props("color=positive").style("width:200px;")
-		ui.button("Cancel",on_click=lambda: rename_dialog.submit(currentnameJ)).props("color=positive").style("width:200px;")
-
 	global new_updated_flag
 	global new_undoable_flag
 	global I_new
@@ -615,8 +607,14 @@ async def I_new_renameJ(current_idx) -> None:
 	global namesE_undo
 	global namesJ
 	global namesJ_undo
-
 	currentnameJ = namesJ[current_idx]
+
+	with ui.dialog().props("persistent") as rename_dialog, ui.card().classes("bg-[#ffffff] dark:bg-[#18191e]"):
+		newname = ui.input(label="Enter new epithet:", value=currentnameJ).style("width:200px;")
+		ui.button("Set New Epithet",on_click=lambda: rename_dialog.submit(newname.value)).style("width:200px;")
+		ui.button("Clear Epithet",on_click=lambda: rename_dialog.submit("")).props("color=positive").style("width:200px;")
+		ui.button("Cancel",on_click=lambda: rename_dialog.submit(currentnameJ)).props("color=positive").style("width:200px;")
+
 	newnameJ = await rename_dialog
 	if newnameJ!=currentnameJ:
 		#new_updated_flag = False
@@ -1433,7 +1431,10 @@ def new_generate_textimage(image_no,textlayerE,textlayerJ,shadowEimage,shadowJim
 	else:
 		imagebuffer = I_new[image_no]
 		textimage = imagebuffer.copy()
-		textimage.putalpha(new_alphamask)
+		if new_alphamask == aMask_ignore:
+			print("Using source image transparency")
+		else:
+			textimage.putalpha(new_alphamask)
 		if fontE.value and textlayerE:
 			textlayerE_cropped = sig_textcropper(textlayerE)
 			textEimageBase = Image.new(mode="RGBA", size=[photowidth,photoheight], color="#00000000")
@@ -1814,32 +1815,52 @@ async def I_new_cropimage(entry_nr):
 
 def set_colorEmain(colorEmain_new):
 	global colorEmain
+	global new_picker_Emain
 	colorEmain=colorEmain_new
+	new_picker_Emain.q_color.props(f"model-value={colorEmain}")
+	new_picker_Emain.update()
 	update_textsample()
 
 def set_colorEoutline(colorEoutline_new):
 	global colorEoutline
+	global new_picker_Eoutline
 	colorEoutline=colorEoutline_new
+	if colorEoutline:
+		new_picker_Eoutline.q_color.props(f"model-value={colorEoutline}")
+	new_picker_Eoutline.update()
 	update_textsample()
 
 def set_colorJmain(colorJmain_new):
 	global colorJmain
+	global new_picker_Jmain
 	colorJmain=colorJmain_new
+	new_picker_Jmain.q_color.props(f"model-value={colorJmain}")
+	new_picker_Jmain.update()
 	update_textsample()
 
 def set_colorJoutline(colorJoutline_new):
 	global colorJoutline
+	global new_picker_Joutline
 	colorJoutline=colorJoutline_new
+	if colorJoutline:
+		new_picker_Joutline.q_color.props(f"model-value={colorJoutline}")
+	new_picker_Joutline.update()
 	update_textsample()
 
 def set_colorEglow(colorEglow_new):
 	global colorEglow
+	global new_picker_Eglow
 	colorEglow=colorEglow_new
+	new_picker_Eglow.q_color.props(f"model-value={colorEglow}")
+	new_picker_Eglow.update()
 	update_textsample()
 
 def set_colorJglow(colorJglow_new):
 	global colorJglow
+	global new_picker_Jglow
 	colorJglow=colorJglow_new
+	new_picker_Jglow.q_color.props(f"model-value={colorJglow}")
+	new_picker_Jglow.update()
 	update_textsample()
 
 def set_nameEalign(positionX,positionY):
@@ -1941,6 +1962,10 @@ def set_new_alphamask(new_aMask_select):
 		button_new_AMcustom.props("color=primary")
 	else:
 		button_new_AMcustom.props("color=positive")
+	if new_alphamask==aMask_ignore:
+		button_new_AMignore.props("color=primary")
+	else:
+		button_new_AMignore.props("color=positive")
 	update_imagesample()
 
 
@@ -2221,6 +2246,7 @@ aMask_blrdrc = []
 aMask_skdrec = []
 aMask_blskrc = []
 aMask_custom = []
+aMask_ignore = []
 placeholder_img = []
 placeholder_pad = []
 
@@ -2238,6 +2264,7 @@ aMasq_blrdrc = aMask_blrdrc.copy()
 aMasq_skdrec = aMask_skdrec.copy()
 aMasq_blskrc = aMask_blskrc.copy()
 aMasq_custom = aMask_circle.copy()
+aMasq_ignore = aMask_circle.copy()
 aMask_select = aMasq_circle
 new_alphamask = aMask_circle
 
@@ -2312,7 +2339,7 @@ def quick_ui_imgSettings() -> None:
 	global layout_images_target
 	if I_quick:
 		with ui.button("Re-Scan",on_click=lambda:import_quick_launch()).style("width:200px;"):
-			ui.tooltip("If you have changed any photo files in the Working Directory, use this to update the list of photos.").props("max-width='200px'").classes("default_tooltip")
+			ui.tooltip("If you have changed any photo files in the working directory, use this to update the list of photos.").props("max-width='200px'").classes("default_tooltip")
 	else:
 		ui.button("Scan Folder",on_click=lambda:import_quick_launch()).style("width:200px;")
 
@@ -2567,7 +2594,7 @@ def new_ui_imgSettings() -> None:
 		with ui.column().classes("items-center"):
 			ui.icon("o_info", size="100px")
 			ui.label("All photos listed in the photo table will be combined into your signature image(s). You can add photos to the photo table in four ways:").style("max-width:450px;")
-			ui.label("(1) As in the 'Quick Sig' panel, you can import multiple local photos at once. Copy the photos you want to use in your signature into the same folder as this executable (the 'Working Directory'), then click 'SCAN FOLDER'. This will add all image files in the Working Directory to the table. Supported are .jpg, .png, .jpeg, .JPG, .PNG, and .JPEG image files.").style("max-width:450px;")
+			ui.label("(1) As in the 'Quick Sig' panel, you can import multiple local photos at once. Copy the photos you want to use in your signature into the same folder as this executable (the 'working directory'), then click 'SCAN FOLDER'. This will add all image files in the working directory to the table. Supported are .jpg, .png, .jpeg, .JPG, .PNG, and .JPEG image files.").style("max-width:450px;")
 			ui.html("(2) You can import photos one by one from anywhere on your computer. Use the 'Add photo: <i class='q-icon material-icons-outlined'>add_circle_outline</i>' button at the bottom of the table, then browse and select your files or drag & drop them into the window.",sanitize=False).style("max-width:450px;")
 			ui.html("(3) You can import images one by one from the web. Use the 'Add photo: <i class='q-icon material-icons-outlined'>language</i>' button at the bottom of the table, then enter the URL to your image file.",sanitize=False).style("max-width:450px;")
 			ui.html("(4) Users of the DollDreaming forum can import photos directly from their doll directory. For details, click the '<i class='q-icon material-icons-outlined'>help_outline</i>' button next to 'DIRECTORY IMPORT' at the bottom of the table.",sanitize=False).style("max-width:450px;")
@@ -2584,7 +2611,7 @@ def new_ui_imgSettings() -> None:
 				ui.icon("o_announcement",color="primary", size="25px")
 				ui.label("The text may not contain any line breaks. Text strings that are too long may not get applied correctly.").style("max-width:350px;")
 			ui.label("If you don't want to enter names into the table one by one, you can import them from a text file instead:").style("max-width:450px;")
-			ui.label("You can enter the names you want to use into the 'names.txt' file that is located in the Working Directory. (Delete the sample text inside the file first.) Put every name you want to enter on a separate line. Save the file, then click the 'READ NAMES.TXT' button.").style("max-width:450px;")
+			ui.label("You can enter the names you want to use into the 'names.txt' file that is located in the working directory. (Delete the sample text inside the file first.) Put every name you want to enter on a separate line. Save the file, then click the 'READ NAMES.TXT' button.").style("max-width:450px;")
 			ui.label("If you don't have a 'names.txt' file, you can create one yourself. Just make sure it's a plain text file (.txt), preferably with Unicode (UTF-8) encoding.").style("max-width:450px;")
 			with ui.row():
 				ui.icon("o_announcement",color="primary", size="25px")
@@ -2599,7 +2626,7 @@ def new_ui_imgSettings() -> None:
 				ui.icon("o_announcement",color="primary", size="25px")
 				ui.label("The text may not contain any line breaks. Text strings that are too long may not get applied correctly.").style("max-width:350px;")
 			ui.label("If you don't want to enter epithets into the table one by one, you can import them from a text file instead:").style("max-width:450px;")
-			ui.label("You can enter the epithets you want to use into the 'epithets.txt' file that is located in the Working Directory. (Delete the sample text inside the file first.) Put every epithet you want to enter on a separate line. Save the file, then click the 'READ EPITHETS.TXT' button.").style("max-width:450px;")
+			ui.label("You can enter the epithets you want to use into the 'epithets.txt' file that is located in the working directory. (Delete the sample text inside the file first.) Put every epithet you want to enter on a separate line. Save the file, then click the 'READ EPITHETS.TXT' button.").style("max-width:450px;")
 			ui.label("If you don't have an 'epithets.txt' file, you can create one yourself. Just make sure it's a plain text file (.txt), preferably with Unicode (UTF-8) encoding.").style("max-width:450px;")
 			with ui.row():
 				ui.icon("o_announcement",color="primary", size="25px")
@@ -2762,6 +2789,7 @@ def new_ui_amaskselect():
 	global button_new_AMskdrec
 	global button_new_AMblskrc
 	global button_new_AMcustom
+	global button_new_AMignore
 
 	with ui.row(wrap=True):
 		with ui.button(on_click=lambda: set_new_alphamask(aMask_circle)).style("width:200px; height:200px;") as button_new_AMcircle:
@@ -2785,8 +2813,10 @@ def new_ui_amaskselect():
 		with ui.button(on_click=lambda: set_new_alphamask(aMask_custom)).style("width:200px; height:200px;").props("color=positive") as button_new_AMcustom:
 				new_ui_customAM()
 		button_new_AMcustom.set_visibility(False)
-		with ui.button(icon="o_add_circle_outline", on_click=lambda: import_alphamap()).style("width:200px; height:200px;").props("color=positive"):
-			ui.tooltip("Add custom alpha map").classes("default_tooltip")
+		with ui.button(icon="o_add_circle_outline", on_click=lambda: import_alphamap()).style("width:200px; height:200px;").props("color=positive size=30px"):
+			ui.tooltip("Add custom alpha map").props("max-width='200px'").classes("default_tooltip")
+		with ui.button(icon="o_block", on_click=lambda: set_new_alphamask(aMask_ignore)).style("width:200px; height:200px;").props("color=positive size=30px") as button_new_AMignore:
+			ui.tooltip("Use transparency from source image.").props("max-width='200px'").classes("default_tooltip")
 
 
 def new_ui_fontSettings():
@@ -2799,6 +2829,10 @@ def new_ui_fontSettings():
 	global slider_transpEoutline
 	global slider_transpJmain
 	global slider_transpJoutline
+	global new_picker_Emain
+	global new_picker_Jmain
+	global new_picker_Eoutline
+	global new_picker_Joutline
 
 	with ui.dialog() as help_new_fonts_dialog, ui.card().classes("bg-[#ffffff] dark:bg-[#18191e]"):
 		with ui.column().classes("items-center"):
@@ -2825,13 +2859,15 @@ def new_ui_fontSettings():
 		with ui.column().classes("col-span-2"):
 			with ui.button_group(): #with ui.row().classes("gap-0"):
 				with ui.button("Text Color", icon="o_format_color_text").style("width:150px;"):
-					ui.color_picker(on_pick=lambda e: set_colorEmain(e.color))
+					new_picker_Emain = ui.color_picker(on_pick=lambda e: set_colorEmain(e.color)).style("width:200px")
+					new_picker_Emain.q_color.props(f"default-view=palette model-value={colorEmain}")
 				with ui.button(icon="o_palette", on_click=lambda:set_colorEmain("#ff6065"), color="positive").style("width:50px;"):
 					ui.tooltip("Default color").props("max-width='200px'").classes("default_tooltip")
 		with ui.column().classes("col-span-2"):
 			with ui.button_group():
 				with ui.button("Text Color", icon="o_format_color_text").style("width:150px;"):
-					ui.color_picker(on_pick=lambda e: set_colorJmain(e.color))
+					new_picker_Jmain = ui.color_picker(on_pick=lambda e: set_colorJmain(e.color)).style("width:200px")
+					new_picker_Jmain.q_color.props(f"default-view=palette model-value={colorJmain}")
 				with ui.button(icon="o_content_copy", on_click=lambda:set_colorJmain(colorEmain), color="positive").style("width:50px;"):
 					ui.tooltip("Copy current text color from names").props("max-width='200px'").classes("default_tooltip")
 		ui.label(" ")
@@ -2855,7 +2891,11 @@ def new_ui_fontSettings():
 				ui.label().bind_text_from(slider_sizeEmain,"value")
 			with ui.button_group():
 				with ui.button("Outline", icon="o_border_color").style("width:150px;"):
-					ui.color_picker(on_pick=lambda e: set_colorEoutline(e.color))
+					new_picker_Eoutline = ui.color_picker(on_pick=lambda e: set_colorEoutline(e.color)).style("width:200px")
+					if colorEoutline:
+						new_picker_Eoutline.q_color.props(f"default-view=palette model-value={colorEoutline}")
+					else:
+						new_picker_Eoutline.q_color.props("default-view=palette")
 				with ui.button(icon="o_format_color_reset", on_click=lambda:set_colorEoutline(False), color="secondary").style("width:50px;"):
 					ui.tooltip("No text outline").props("max-width='200px'").classes("default_tooltip")
 		with ui.column().classes("col-span-2"):
@@ -2867,7 +2907,11 @@ def new_ui_fontSettings():
 				ui.label().bind_text_from(slider_sizeJmain,"value")
 			with ui.button_group():
 				with ui.button("Outline", icon="o_border_color").style("width:130px;"):
-					ui.color_picker(on_pick=lambda e: set_colorJoutline(e.color))
+					new_picker_Joutline = ui.color_picker(on_pick=lambda e: set_colorJoutline(e.color)).style("width:200px")
+					if colorJoutline:
+						new_picker_Joutline.q_color.props(f"default-view=palette model-value={colorJoutline}")
+					else:
+						new_picker_Joutline.q_color.props("default-view=palette")
 				with ui.button(icon="o_content_copy", on_click=lambda:set_colorJoutline(colorEoutline), color="positive").style("width:35px;"):
 					ui.tooltip("Copy current outline color from names").props("max-width='200px'").classes("default_tooltip")
 				with ui.button(icon="o_format_color_reset", on_click=lambda:set_colorJoutline(False), color="secondary").style("width:35px;"):
@@ -2972,6 +3016,8 @@ def new_ui_fontAlignment():
 	global slider_glowJoffsetY
 	global slider_glowJblur
 	global new_handle_oversize
+	global new_picker_Eglow
+	global new_picker_Jglow
 
 	with ui.dialog() as help_new_alignment_dialog, ui.card().classes("bg-[#ffffff] dark:bg-[#18191e]"):
 		with ui.column().classes("items-center"):
@@ -3090,11 +3136,13 @@ def new_ui_fontAlignment():
 			ui.label("")
 		check_textEglow = ui.checkbox("Name Glow",on_change=lambda e:set_nameEglow(e.value))
 		with ui.button(icon="o_format_color_fill"):
-			ui.color_picker(on_pick=lambda e: set_colorEglow(e.color))
+			new_picker_Eglow = ui.color_picker(on_pick=lambda e: set_colorEglow(e.color)).style("width:200px")
+			new_picker_Eglow.q_color.props("default-view=palette")
 			ui.tooltip("Name glow color").props("max-width='200px'").classes("default_tooltip")
 		check_textJglow = ui.checkbox("Epithet Glow",on_change=lambda e:set_nameJglow(e.value))
 		with ui.button(icon="o_format_color_fill"):
-			ui.color_picker(on_pick=lambda e: set_colorJglow(e.color))
+			new_picker_Jglow = ui.color_picker(on_pick=lambda e: set_colorJglow(e.color)).style("width:200px")
+			new_picker_Jglow.q_color.props("default-view=palette")
 			ui.tooltip("Epithet glow color").props("max-width='200px'").classes("default_tooltip")
 		ui.label("")
 		ui.label("")
@@ -3250,7 +3298,7 @@ def page():
 			ui.label("QUICKLY GENERATE A SIMPLE SIGNATURE")
 			with ui.row(wrap=True):
 				ui.label("How to use:")
-				ui.label("Copy the photos that you want to use in your signature into the same folder as this executable (the 'Working Directory'), then click 'SCAN FOLDER'. If your photos show up below, you're good to go.").style("max-width:450px;")
+				ui.label("Copy the photos that you want to use in your signature into the same folder as this executable (the 'working directory'), then click 'SCAN FOLDER'. If your photos show up below, you're good to go.").style("max-width:450px;")
 
 			quick_ui_imgSettings()
 			quick_ui_layoutDisplay()
@@ -3282,7 +3330,7 @@ def page():
 			with ui.dialog() as help_new_directory_dialog, ui.card().classes("bg-[#ffffff] dark:bg-[#18191e]"):
 				with ui.column().classes("items-center"):
 					ui.icon("o_info", size="100px")
-					ui.label("Users of the DollDreaming forum can import photos directly from their doll directory. To do this, you will need to copy the links to your dolls' doll directory pages into the 'doll_directory.txt' file that is located in the same folder as this executable. (Delete the sample text inside the file first.) Put every link you want to enter on a separate line. Save the file, then click the 'DIRECTORY IMPORT' button.").style("max-width:450px;")
+					ui.label("Users of the DollDreaming forum can import photos directly from their doll directory. To do this, you will need to copy the links to your dolls' doll directory pages into the 'doll_directory.txt' file that is located in the working directory. (Delete the sample text inside the file first.) Put every link you want to enter on a separate line. Save the file, then click the 'DIRECTORY IMPORT' button.").style("max-width:450px;")
 					with ui.row():
 						ui.icon("o_announcement",color="primary", size="25px")
 						ui.label("The directory import is comparatively slow. - If you have your photos available locally, the batch import with 'SCAN FOLDER' will be substantially faster.").style("max-width:350px;")
