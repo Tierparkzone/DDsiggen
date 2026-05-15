@@ -151,7 +151,7 @@ Known issues:
 Packaged script will not run on Mac:
 Packaging DDsiggen.py version 3.00 and above with NiceGUI-pack on a Mac platform will complete sucessfully, but the resulting executable will not start the program properly.
 The python script DDsiggen.py itself will work without issue, even if it is version 3.00 and above.
-Users who require a packaged executable on Mac, are advised to use latest available release of DDsiggen_ver.2.XX.X_mac instead.
+Users who require a packaged executable on Mac, are advised to use the latest available release of DDsiggen_ver.2.XX.X_mac instead.
 
 Text outline may appear garbled or spotty:
 Some combinations of font, font size and outline thickness may cause the outline of text to appear garbled or have holes. This may be caused by the font file itself or by how Pillow draws text outlines. Try some different text/outline setting combinations.
