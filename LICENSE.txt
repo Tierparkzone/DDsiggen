@@ -291,7 +291,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 
 - Python --------------------------------------------------------------------------
 
-Python 3.13.7
+Python 3.14.4
 
 A. HISTORY OF THE SOFTWARE
 ==========================
@@ -575,7 +575,7 @@ PERFORMANCE OF THIS SOFTWARE.
 
 - NiceGUI -------------------------------------------------------------------------
 
-nicegui   2.24.2    MIT License
+nicegui   3.10.0    MIT License
 
 Copyright (c) 2021 Zauberzeug GmbH
 
@@ -601,7 +601,7 @@ Copyright (c) 2021 Zauberzeug GmbH
 
 - Pillow --------------------------------------------------------------------------
 
-pillow    11.3.0    MIT-CMU
+pillow    12.2.0    MIT-CMU
 
 The Python Imaging Library (PIL)
 
@@ -2089,9 +2089,9 @@ the FAQ for more information on the distribution of modified source versions.
 
 - Requests ------------------------------------------------------------------------
 
-requests    2.32.5    Apache Software License
+requests    2.33.1    Apache Software License
 
-Copyright 2019 Kenneth Reitz
+Copyright (c) 2019 Kenneth Reitz
 
           Apache License
     Version 2.0, January 2004
