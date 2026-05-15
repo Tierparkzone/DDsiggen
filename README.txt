@@ -1,5 +1,5 @@
 DDsiggen - Tierparkzone's Forum Signature Generator
-ver.2.09
+ver.3.09
 
 A python-based program/script that takes multiple individual image files and text inputs to create composite images for use as a signature on web forums. The generated output images by default are set up to meet the signature requirements of the DollDreaming forum at "https://www.dolldreaming.com/". Depending on your settings in the software, the generated output images may not actually fulfill the signature requirements of the DollDreaming forum (or any other forum). Please confirm the properties of the output images yourself before using them as signatures.
 The author of this software is a user of the DollDreaming forum but in no other way affiliated with DollDreaming.
@@ -28,7 +28,7 @@ Generate a signature with custom text and additional options.
 - Manually adjust the crop for individual photos or for groups of photos at once
 - Add or import up to two text layers ("name" and "epithet") that will get applied to the photos
 - Reorder photos and text as desired
-- Select one of the provided alpha masks
+- Select one of the provided alpha masks or import your own
 - Customize text font, colors and positions for each text layer (you can also use your own font files)
 - Apply shadow and/or glow effects to the text layers
 - Choose how the photos will be arranged in the signature image(s) or leave it to the program
@@ -41,6 +41,12 @@ Package contents:
 The packaged program will provide the below file structure.
 
 DDsiggen_<version No.>_<OS type>        (Working directory)
+|
+|--alphamasks               (This contains some sample alpha masks that you can import manually)
+|  |
+|  |--amask_blrhrt.png
+|  |
+|  |--amask_heartt.png
 |
 |--fonts                    (Place any font files you wish to use in here)
 |  |
@@ -99,16 +105,22 @@ Preparing custom fonts:
 - Supported file formats are .ttf, .otf, .TTF and .OTF.
 - If you would like to use non-alphanumeric scripts in your signature (e.g. Chinese, Japanese, Korean), please provide a font that supports that script.
 - The default fonts packaged with this program mostly support Japanese script, but may lack some special Kanji.
-- If the generated text appears garbled or as rectangles inside the program, the selected font does not support the script of the current text. Select a different font.
+- If the generated text appears garbled or as rectangles inside the program, the selected font does not support the script of the current text. Please select a different font.
+
+Preparing custom alpha maps:
+- When prompted to "chose a shape for the individual photos" in "Create New" mode, users may import their own custom alpha masks.
+- Any image file may be used as alpha mask, but for best results use a greyscale image that is at least 200 pixels tall and that has the same aspect ratio as you want the photos in your signature to have.
+- Custom alpha masks can be imported from anywhere on your PC.
+- Sample alpha masks to use and/or modify are provided in the "alphamasks" subfolder.
 
 Running the executable/script:
 - The packaged executable (.exe on Windows, no file extension on Linux) can be launched via double click, right click -> Run, or right click -> Run in terminal.
-- The bare python script is best run from terminal with $<your python environment> DDsiggen.py
-- First execution of the packaged executable on Windows will likely trigger SmartScreen, since the program is not digitally signed. Select "More information -> Run anyway" to start the program.
+- The bare python script is best run from terminal with $python DDsiggen.py
+- First execution of the packaged executable on Windows will likely trigger SmartScreen, since this program is not digitally signed. Select "More information -> Run anyway" to start the program.
 - A terminal window will open. (Unless the executable/script was already launched via terminal.)
 - Shortly afterward, your browser will open a new tab displaying the program's UI.
 - On first launch, you may get a firewall alert. Denying the communication request will at most impact your ability to import images from the web. Everything else will function regardless.
-- Select either "Quick Sig" or "Create New" and follow the instructions in the program to generate your signature images.
+- Select either "Quick Sig" or "Create New" and follow the instructions inside the program to generate your signature images.
 - Exported signature images will be placed into the "signatures" subfolder.
 - Newly exported signature images may overwrite older ones. Copy and/or rename older signature images that you wish to keep.
 
@@ -126,18 +138,20 @@ Running/packing the Python script:
 - To pack the script you will also require the Python package pyinstaller.
 - If you encounter any issues when running or packing the script, try again with the Python and package versions listed below.
 - The script is known to work with:
-   Python        3.13.7, 1.13.11
-   nicegui       2.24.2
-   pillow        11.3.0
-   requests      2.32.5
-   pyinstaller   6.16.0
+   Python        3.14.4
+   nicegui       3.10.0
+   pillow        12.2.0
+   requests      2.33.1
+   pyinstaller   6.19.0
 
 
 
 Known issues:
 
-Original transparency of photos is discarded:
-If any of the imported photos are PNGs with transparent areas, their original transparency information will be ignored during signature generation. Instead the transparency of the selected alpha mask is applied.
+Packaged script will not run on Mac:
+Packaging DDsiggen.py version 3.00 and above with NiceGUI-pack on a Mac platform will complete sucessfully, but the resulting executable will not start the program properly.
+The python script DDsiggen.py itself will work without issue, even if it is version 3.00 and above.
+Users who require a packaged executable on Mac, are advised to use latest available release of DDsiggen_ver.2.XX.X_mac instead.
 
 Text outline may appear garbled or spotty:
 Some combinations of font, font size and outline thickness may cause the outline of text to appear garbled or have holes. This may be caused by the font file itself or by how Pillow draws text outlines. Try some different text/outline setting combinations.

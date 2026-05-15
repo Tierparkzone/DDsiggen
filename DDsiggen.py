@@ -20,7 +20,7 @@ import requests
 #import imageio as iio
 
 #Version Number
-version_no = "3.08"
+version_no = "3.09"
 
 # macOS packaging support - comment in the below lines before packaging for mac
 #if getattr(sys, 'frozen', False):
@@ -1432,7 +1432,9 @@ def new_generate_textimage(image_no,textlayerE,textlayerJ,shadowEimage,shadowJim
 		imagebuffer = I_new[image_no]
 		textimage = imagebuffer.copy()
 		if new_alphamask == aMask_ignore:
-			print("Using source image transparency")
+			if textimage.mode != "RGBA":
+				textimage.putalpha(aMask_square)
+			#print("Using source image transparency")
 		else:
 			textimage.putalpha(new_alphamask)
 		if fontE.value and textlayerE:
@@ -3397,5 +3399,5 @@ else:
 
 '''
 Build with
-nicegui-pack --onefile --icon ./icon/DDicon.png --name "DDsiggen_ver.<version number>" DDsiggen.py
+nicegui-pack --onefile --icon ./icons/DDicon.png --name "DDsiggen_ver.<version number>" DDsiggen.py
 '''
