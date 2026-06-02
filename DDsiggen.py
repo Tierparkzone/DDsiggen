@@ -2,10 +2,6 @@
 # (c) by Tierparkzone
 # This script is provided under the MIT license (see attached 'LICENSE' file).
 
-# macOS packaging support - comment in the below lines before packaging for mac
-#from multiprocessing import freeze_support  # noqa
-#freeze_support()  # noqa
-
 from multiprocessing import freeze_support
 from nicegui import ui, events, app, native
 from PIL import ImageOps, Image, ImageDraw, ImageTransform, ImageFilter, ImageFont
@@ -17,12 +13,12 @@ import re
 import math
 import asyncio
 import requests
-#import imageio as iio
+#import sys     #macOS packaging support - comment in before building for mac
 
 #Version Number
-version_no = "3.09"
+version_no = "3.11"
 
-# macOS packaging support - comment in the below lines before packaging for mac
+# macOS packaging support - comment in the below lines before building for mac
 #if getattr(sys, 'frozen', False):
 #	dir_path = os.path.dirname(sys.executable)
 #else:
@@ -76,8 +72,8 @@ async def import_quick_launch():
 	with ui.dialog().props("persistent") as import_quick_dialog, ui.card().classes("bg-[#ffffff] dark:bg-[#18191e]"):
 		ui.label("Any changes to the list of photos (Step 01.) will be lost. \n This cannot be undone!").style("white-space:pre-wrap;")
 		with ui.row():
-			ui.button("Re-Scan",on_click=lambda: import_quick_dialog.submit(False)).style("width:200px;")
-			ui.button("Cancel",on_click=lambda: import_quick_dialog.submit(True)).props("color=positive").style("width:200px;")
+			ui.button("Re-Scan",on_click=lambda: import_quick_dialog.submit(False)).props("color=primary").style("width:200px;")
+			ui.button("Cancel",on_click=lambda: import_quick_dialog.submit(True)).props("color=secondary").style("width:200px;")
 	with ui.dialog().props("persistent") as wait_dialog, ui.card().classes("bg-[#ffffff] dark:bg-[#18191e]"):
 		with ui.row():
 			ui.spinner()
@@ -153,7 +149,7 @@ async def import_new_launch():
 			ui.label("Entries already exist in the photo column. How do you wish to import the new photos?").style("max-width:300px;")
 			ui.button("Overwrite",on_click=lambda: import_mode_dialog.submit("Overwrite")).style("width:200px;")
 			ui.button("Append",on_click=lambda: import_mode_dialog.submit("Append")).style("width:200px;")
-			ui.button("Cancel",on_click=lambda: import_mode_dialog.submit("Cancel")).props("color=positive").style("width:200px;")
+			ui.button("Cancel",on_click=lambda: import_mode_dialog.submit("Cancel")).props("color=secondary").style("width:200px;")
 	with ui.dialog().props("persistent") as wait_dialog, ui.card().classes("bg-[#ffffff] dark:bg-[#18191e]"):
 		with ui.row():
 			ui.spinner()
@@ -245,7 +241,7 @@ async def import_local():
 		with ui.column().classes("items-center"):
 			ui.html("Drag & drop your photo into the area below or click the '<i class='q-icon material-icons'>add_box</i>' button to open the file picker.",sanitize=False).style("max-width:300px;")
 			ui.upload(auto_upload=True, on_upload=lambda e: import_local_dialog.submit(e.file))
-			ui.button("Cancel",on_click=lambda: import_local_dialog.submit(False)).props("color=positive").style("width:200px;")
+			ui.button("Cancel",on_click=lambda: import_local_dialog.submit(False)).props("color=secondary").style("width:200px;")
 
 	global new_updated_flag
 	global new_undoable_flag
@@ -322,7 +318,7 @@ async def directory_import():
 				ui.label(f"About to import photos from {len(new_dolls)} doll directory entries. This may take some time. ")
 				with ui.row():
 					ui.button("Import",on_click=lambda: import_directory_dialog.submit(False)).style("width:200px;")
-					ui.button("Cancel",on_click=lambda: import_directory_dialog.submit(True)).props("color=positive").style("width:200px;")
+					ui.button("Cancel",on_click=lambda: import_directory_dialog.submit(True)).props("color=secondary").style("width:200px;")
 		is_abort = await import_directory_dialog
 		if is_abort:
 			return
@@ -383,7 +379,7 @@ async def import_alphamap():
 		with ui.column().classes("items-center"):
 			ui.html("Drag & drop an image into the area below or click the '<i class='q-icon material-icons'>add_box</i>' button to open the file picker. For best results, use greyscale images with the aspect ratio selected at the start. Importing a new custom alpha map will overwrite the previous one.",sanitize=False).style("max-width:300px;")
 			ui.upload(auto_upload=True, on_upload=lambda e: import_AM_dialog.submit(e.file))
-			ui.button("Cancel",on_click=lambda: import_AM_dialog.submit(False)).props("color=positive").style("width:200px;")
+			ui.button("Cancel",on_click=lambda: import_AM_dialog.submit(False)).props("color=secondary").style("width:200px;")
 
 	global aMask_custom
 	global aMasq_custom
@@ -424,7 +420,7 @@ async def import_namesE():
 			ui.label("Entries already exist in the name column. How do you wish to import the new names?").style("max-width:300px;")
 			ui.button("Overwrite",on_click=lambda: import_mode_dialog.submit("Overwrite")).style("width:200px;")
 			ui.button("Append",on_click=lambda: import_mode_dialog.submit("Append")).style("width:200px;")
-			ui.button("Cancel",on_click=lambda: import_mode_dialog.submit("Cancel")).props("color=positive").style("width:200px;")
+			ui.button("Cancel",on_click=lambda: import_mode_dialog.submit("Cancel")).props("color=secondary").style("width:200px;")
 
 	if I_new_checkemptynames(namesE):
 		import_mode = await import_mode_dialog
@@ -474,7 +470,7 @@ async def import_namesJ():
 			ui.label("Entries already exist in the epithet column. How do you wish to import the new epithets?").style("max-width:300px;")
 			ui.button("Overwrite",on_click=lambda: import_mode_dialog.submit("Overwrite")).style("width:200px;")
 			ui.button("Append",on_click=lambda: import_mode_dialog.submit("Append")).style("width:200px;")
-			ui.button("Cancel",on_click=lambda: import_mode_dialog.submit("Cancel")).props("color=positive").style("width:200px;")
+			ui.button("Cancel",on_click=lambda: import_mode_dialog.submit("Cancel")).props("color=secondary").style("width:200px;")
 
 	if I_new_checkemptynames(namesJ):
 		import_mode = await import_mode_dialog
@@ -578,8 +574,8 @@ async def I_new_renameE(current_idx) -> None:
 	with ui.dialog().props("persistent") as rename_dialog, ui.card().classes("bg-[#ffffff] dark:bg-[#18191e]"):
 		newname = ui.input(label="Enter new name:", value=currentnameE).style("width:200px;")
 		ui.button("Set New Name",on_click=lambda: rename_dialog.submit(newname.value)).style("width:200px;")
-		ui.button("Clear Name",on_click=lambda: rename_dialog.submit("")).props("color=positive").style("width:200px;")
-		ui.button("Cancel",on_click=lambda: rename_dialog.submit(currentnameE)).props("color=positive").style("width:200px;")
+		ui.button("Clear Name",on_click=lambda: rename_dialog.submit("")).props("color=negative").style("width:200px;")
+		ui.button("Cancel",on_click=lambda: rename_dialog.submit(currentnameE)).props("color=secondary").style("width:200px;")
 
 	newnameE = await rename_dialog
 	if newnameE!=currentnameE:
@@ -612,8 +608,8 @@ async def I_new_renameJ(current_idx) -> None:
 	with ui.dialog().props("persistent") as rename_dialog, ui.card().classes("bg-[#ffffff] dark:bg-[#18191e]"):
 		newname = ui.input(label="Enter new epithet:", value=currentnameJ).style("width:200px;")
 		ui.button("Set New Epithet",on_click=lambda: rename_dialog.submit(newname.value)).style("width:200px;")
-		ui.button("Clear Epithet",on_click=lambda: rename_dialog.submit("")).props("color=positive").style("width:200px;")
-		ui.button("Cancel",on_click=lambda: rename_dialog.submit(currentnameJ)).props("color=positive").style("width:200px;")
+		ui.button("Clear Epithet",on_click=lambda: rename_dialog.submit("")).props("color=negative").style("width:200px;")
+		ui.button("Cancel",on_click=lambda: rename_dialog.submit(currentnameJ)).props("color=secondary").style("width:200px;")
 
 	newnameJ = await rename_dialog
 	if newnameJ!=currentnameJ:
@@ -841,7 +837,7 @@ async def I_new_clear():
 		ui.label("Clear all photos?")
 		with ui.row():
 			ui.button("Continue",on_click=lambda: confirm_clear_dialog.submit(True)).style("width:200px;")
-			ui.button("Cancel",on_click=lambda: confirm_clear_dialog.submit(False)).props("color=positive").style("width:200px;")
+			ui.button("Cancel",on_click=lambda: confirm_clear_dialog.submit(False)).props("color=secondary").style("width:200px;")
 
 	if I_new:
 		is_continue = await confirm_clear_dialog
@@ -919,7 +915,7 @@ async def namesE_clear():
 		ui.label("Clear all names?")
 		with ui.row():
 			ui.button("Continue",on_click=lambda: confirm_clear_dialog.submit(True)).style("width:200px;")
-			ui.button("Cancel",on_click=lambda: confirm_clear_dialog.submit(False)).props("color=positive").style("width:200px;")
+			ui.button("Cancel",on_click=lambda: confirm_clear_dialog.submit(False)).props("color=secondary").style("width:200px;")
 
 	if I_new_checkemptynames(namesE):
 		#new_updated_flag = False
@@ -995,7 +991,7 @@ async def namesJ_clear():
 		ui.label("Clear all epithets?")
 		with ui.row():
 			ui.button("Continue",on_click=lambda: confirm_clear_dialog.submit(True)).style("width:200px;")
-			ui.button("Cancel",on_click=lambda: confirm_clear_dialog.submit(False)).props("color=positive").style("width:200px;")
+			ui.button("Cancel",on_click=lambda: confirm_clear_dialog.submit(False)).props("color=secondary").style("width:200px;")
 
 	if I_new_checkemptynames(namesJ):
 		#new_updated_flag = False
@@ -1638,6 +1634,7 @@ def dragging_end():
 
 def update_kanvas():
 	global select_overlay
+	global viewsettings
 	kanvas.content = f"<image href='{I_enc}' x='{viewp_xoff}' y='{viewp_yoff}' width='{math.floor(viewp_width*currentzoom)}' height='{math.floor(viewp_height*currentzoom)}' />"
 	if select_overlay == "Grid":
 		kanvas.content = kanvas.content + f"<line x1='{0}' y1='{math.floor(photoheight/3)}' x2='{(photowidth)}' y2='{math.floor(photoheight/3)}' stroke='red' stroke-opacity='{0.6}' stroke-width='2' /> <line x1='{0}' y1='{math.ceil(2*photoheight/3)}' x2='{(photowidth)}' y2='{math.ceil(2*photoheight/3)}' stroke='red' stroke-opacity='{0.6}' stroke-width='2' /> <line x1='{math.floor(photowidth/3)}' y1='{0}' x2='{math.floor(photowidth/3)}' y2='{(photoheight)}' stroke='red' stroke-opacity='{0.6}' stroke-width='2' /> <line x1='{math.ceil(2*photowidth/3)}' y1='{0}' x2='{math.ceil(2*photowidth/3)}' y2='{(photoheight)}' stroke='red' stroke-opacity='{0.6}' stroke-width='2' />"
@@ -1647,6 +1644,8 @@ def update_kanvas():
 		#photoscale=min(photoheight,photowidth)
 		#kanvas.content = kanvas.content + f"<circle cx='{math.floor(0.5*photowidth)}' cy='{math.floor(0.4*photoscale)}' r='{math.floor(0.33*photoscale)}' fill='none' stroke='red' stroke-opacity='{0.6}' stroke-width='2' /> <circle cx='{math.floor(0.5*photowidth)}' cy='{math.floor(0.58*photoscale)}' r='{math.floor(0.2*photoscale)}' fill='none' stroke='red' stroke-opacity='{0.6}' stroke-width='2' /> <path d='m {math.floor(0.5*photowidth-0.08*photoscale),math.floor(0.78*photoscale)} c -0.340595,2.270641 -0.681185,4.54124 -4.143983,6.073954 -3.462799,1.532715 -10.047528,2.327423 -16.632391,3.122148' fill='none' stroke='red' stroke-opacity='{0.6}' stroke-width='2' />"
 		#math.floor(0.5*photowidth-0.09*photoscale),math.floor(0.87*photoscale)],[math.floor(0.5*photowidth-0.29*photoscale),math.floor(0.9*photoscale)]}'
+	viewsettings.update({"x_offset":-viewp_xoff,"y_offset":-viewp_yoff,"zoom":currentzoom})
+	#print(viewsettings)
 
 
 def switchoverlay(new_overlay):
@@ -1692,6 +1691,7 @@ async def I_new_cropimage(entry_nr):
 	global viewp_height
 	global kanvas
 	global select_overlay
+	global viewsettings
 	update_progress = 0
 
 	try:
@@ -1739,6 +1739,14 @@ async def I_new_cropimage(entry_nr):
 	maxzoom = max(maxzoom,1.5)
 	maxzoom = min(maxzoom,3)
 
+	if I_metadata[entry_nr][3]:
+		print(I_metadata[entry_nr][3])
+		viewp_xoff = -I_metadata[entry_nr][3].get("x_offset")
+		viewp_yoff = -I_metadata[entry_nr][3].get("y_offset")
+		currentzoom = I_metadata[entry_nr][3].get("zoom")
+
+	viewsettings={"x_offset":-viewp_xoff,"y_offset":-viewp_yoff,"zoom":currentzoom}
+
 	with ui.dialog().props("persistent") as cropimage_dialog, ui.card().classes("bg-[#ffffff] dark:bg-[#18191e]"):
 		with ui.column().classes("items-center"):
 			ui.label("Adjust the zoom and drag your photo until you are satisfied with the crop.").style("max-width:300px;")
@@ -1751,14 +1759,19 @@ async def I_new_cropimage(entry_nr):
 
 			ui.label("Zoom")
 			with ui.row():
-				slider_zoom = ui.slider(min=1,max=maxzoom,value=1,step=0.1, on_change=lambda e: adjustzoom(e.value)).style(f"width:200px;")
-				ui.label().bind_text_from(slider_zoom,"value")
+				slider_zoom = ui.slider(min=1,max=maxzoom,value=currentzoom,step=0.05, on_change=lambda e: adjustzoom(e.value)).style(f"width:200px;")
+				ui.label().bind_text_from(slider_zoom,"value",backward=lambda v: f"{v:.2f}")
+			with ui.row():
+				ui.label("X-Offset:")
+				ui.label().bind_text_from(viewsettings,"x_offset")
+				ui.label("X-Offset:")
+				ui.label().bind_text_from(viewsettings,"y_offset")
 			ui.label("Overlay")
 			radio_select_overlay = ui.radio(["None","Grid","Circles"],value="None", on_change=lambda e: switchoverlay(e.value)).props("inline")
 			ui.button("Apply to this photo", on_click=lambda: cropimage_dialog.submit("photo")).style("width:200px;")
 			with ui.button("Apply to all", on_click=lambda: cropimage_dialog.submit("all")).style("width:200px;"):
 				ui.tooltip("Apply this crop to all photos of the same size that do not have a custom crop yet").props("max-width='200px'").classes("default_tooltip")
-			ui.button("Cancel", on_click=lambda: cropimage_dialog.submit("abort")).props("color=positive").style("width:200px;")
+			ui.button("Cancel", on_click=lambda: cropimage_dialog.submit("abort")).props("color=secondary").style("width:200px;")
 
 	with ui.dialog().props("persistent") as wait_dialog, ui.card().classes("bg-[#ffffff] dark:bg-[#18191e]"):
 		with ui.row():
@@ -1778,6 +1791,7 @@ async def I_new_cropimage(entry_nr):
 		wait_dialog.open()
 		await asyncio.sleep(0.01)
 		refaspect=I_metadata[entry_nr][1]
+		I_metadata[entry_nr][3]=False
 		metadatapos=0
 		metadata_total = len(I_metadata)
 		for metadata in I_metadata:
@@ -1790,7 +1804,7 @@ async def I_new_cropimage(entry_nr):
 					ImageOps.exif_transpose(image=I_tmp, in_place=True)
 					I_tmp = ImageOps.cover(image=I_tmp, size=[math.floor(viewp_width*currentzoom),math.floor(viewp_height*currentzoom)], method=Image.Resampling.LANCZOS)
 					I_new[metadatapos] = I_tmp.crop([-viewp_xoff,-viewp_yoff,photowidth-viewp_xoff,photoheight-viewp_yoff])
-					metadata[3] = True
+					metadata[3] = viewsettings.copy()
 			metadatapos=metadatapos+1
 			update_progress = metadatapos/metadata_total
 			await asyncio.sleep(0.01)
@@ -1805,7 +1819,7 @@ async def I_new_cropimage(entry_nr):
 		I_tmp = ImageOps.cover(image=I_tmp, size=[math.floor(viewp_width*currentzoom),math.floor(viewp_height*currentzoom)], method=Image.Resampling.LANCZOS)
 		#print(I_tmp.size)
 		I_new[entry_nr] = I_tmp.crop([-viewp_xoff,-viewp_yoff,photowidth-viewp_xoff,photoheight-viewp_yoff])
-		I_metadata[entry_nr][3] = True
+		I_metadata[entry_nr][3] = viewsettings.copy()
 		#print(I_new_new.size)
 	new_undoable_flag = True
 	new_button_undoDisplay.refresh()
@@ -1923,39 +1937,39 @@ def set_new_alphamask(new_aMask_select):
 	if new_alphamask==aMask_circle:
 		button_new_AMcircle.props("color=primary")
 	else:
-		button_new_AMcircle.props("color=positive")
+		button_new_AMcircle.props("color=secondary")
 	if new_alphamask==aMask_blrcir:
 		button_new_AMblrcir.props("color=primary")
 	else:
-		button_new_AMblrcir.props("color=positive")
+		button_new_AMblrcir.props("color=secondary")
 	if new_alphamask==aMask_square:
 		button_new_AMsquare.props("color=primary")
 	else:
-		button_new_AMsquare.props("color=positive")
+		button_new_AMsquare.props("color=secondary")
 	if new_alphamask==aMask_sqedge:
 		button_new_AMsqedge.props("color=primary")
 	else:
-		button_new_AMsqedge.props("color=positive")
+		button_new_AMsqedge.props("color=secondary")
 	if new_alphamask==aMask_blrsqr:
 		button_new_AMblrsqr.props("color=primary")
 	else:
-		button_new_AMblrsqr.props("color=positive")
+		button_new_AMblrsqr.props("color=secondary")
 	if new_alphamask==aMask_rndrec:
 		button_new_AMrndrec.props("color=primary")
 	else:
-		button_new_AMrndrec.props("color=positive")
+		button_new_AMrndrec.props("color=secondary")
 	if new_alphamask==aMask_blrdrc:
 		button_new_AMblrdrc.props("color=primary")
 	else:
-		button_new_AMblrdrc.props("color=positive")
+		button_new_AMblrdrc.props("color=secondary")
 	if new_alphamask==aMask_skdrec:
 		button_new_AMskdrec.props("color=primary")
 	else:
-		button_new_AMskdrec.props("color=positive")
+		button_new_AMskdrec.props("color=secondary")
 	if new_alphamask==aMask_blskrc:
 		button_new_AMblskrc.props("color=primary")
 	else:
-		button_new_AMblskrc.props("color=positive")
+		button_new_AMblskrc.props("color=secondary")
 	if aMask_custom:
 		button_new_AMcustom.set_visibility(True)
 	else:
@@ -1963,11 +1977,11 @@ def set_new_alphamask(new_aMask_select):
 	if new_alphamask==aMask_custom:
 		button_new_AMcustom.props("color=primary")
 	else:
-		button_new_AMcustom.props("color=positive")
+		button_new_AMcustom.props("color=secondary")
 	if new_alphamask==aMask_ignore:
 		button_new_AMignore.props("color=primary")
 	else:
-		button_new_AMignore.props("color=positive")
+		button_new_AMignore.props("color=secondary")
 	update_imagesample()
 
 
@@ -2003,7 +2017,7 @@ async def adjustaspect(newaspect):
 		ui.label("All photos will be reloaded and any custom crops will be removed. This cannot be undone!").style("max-width:300px;")
 		with ui.row():
 			ui.button("Change Aspect Ratio",on_click=lambda: change_aspect_dialog.submit(False)).style("width:200px;")
-			ui.button("Cancel",on_click=lambda: change_aspect_dialog.submit(True)).props("color=positive").style("width:200px;")
+			ui.button("Cancel",on_click=lambda: change_aspect_dialog.submit(True)).props("color=secondary").style("width:200px;")
 
 	with ui.dialog().props("persistent") as wait_dialog, ui.card().classes("bg-[#ffffff] dark:bg-[#18191e]"):
 		with ui.row():
@@ -2150,7 +2164,7 @@ def exit_application():
 
 ## Script starts here ############################################################	
 
-#freeze_support() #comment in for building
+#freeze_support()     #comment in for building
 print("Please wait a moment while the application is starting...")
 
 
@@ -2308,7 +2322,7 @@ def quick_button_genSig() -> None:
 @ui.refreshable
 def quick_button_exportSig() -> None:
 	if quick_updated_flag and quick_generated_flag:
-		ui.button("Export Files", icon="o_save", on_click=lambda:save_quicksig()).style("width:200px;")
+		ui.button("Export Files", icon="o_save", on_click=lambda:save_quicksig()).props("color=positive").style("width:200px;")
 	else:
 		with ui.button("Export Files", icon="o_save").style("width:200px;").props("disable"):
 			ui.tooltip("Please re-generate the signature!").props("max-width='200px'").classes("default_tooltip")
@@ -2326,9 +2340,9 @@ def quick_list_imgDisplay() -> None:
 					else:
 						ui.button(icon="o_chevron_left", on_click=lambda iid=idx:I_quick_moveup(iid)).style("width:80px;").classes("rounded-none rounded-bl-sm")
 					if len(I_quick)<=1:
-						ui.button(icon="o_delete", color="secondary").style("width:40px;").props("disable").classes("rounded-none")
+						ui.button(icon="o_delete", color="negative").style("width:40px;").props("disable").classes("rounded-none")
 					else:
-						with ui.button(icon="o_delete", color="secondary", on_click=lambda iid=idx:I_quick_delete(iid)).style("width:40px;").classes("rounded-none"):
+						with ui.button(icon="o_delete", color="negative", on_click=lambda iid=idx:I_quick_delete(iid)).style("width:40px;").classes("rounded-none"):
 							ui.tooltip("Remove photo from list").props("max-width='200px'").classes("default_tooltip")
 					if idx==len(I_quick)-1:
 						ui.button(icon="o_chevron_right").style("width:80px;").props("disable").classes("rounded-none rounded-br-sm")
@@ -2388,7 +2402,7 @@ def quick_ui_layoutDisplay() -> None:
 								ui.image(I_quick[imgN]).props(f"width={imgsize}px height={imgsize}px")
 							else:
 								with ui.image(padding_image).props(f"width={imgsize}px height={imgsize}px"):
-									ui.label("Padding").style(f"width:{imgsize}px; height:{imgsize}px;").classes(f"text-white bg-positive overflow-hidden text-ellipsis")
+									ui.label("Padding").style(f"width:{imgsize}px; height:{imgsize}px;").classes(f"text-white bg-secondary overflow-hidden text-ellipsis")
 							imgN=imgN+1
 							imgX=imgX+1
 					imgY=imgY+1
@@ -2414,7 +2428,7 @@ def quick_ui_layoutDisplay() -> None:
 									ui.image(I_quick[imgN]).props(f"width={imgsize}px height={imgsize}px")
 								else:
 									with ui.image(padding_image).props(f"width={imgsize}px height={imgsize}px"):
-										ui.label("Padding").style(f"width:{imgsize}px; height:{imgsize}px;").classes(f"text-white bg-positive overflow-hidden text-ellipsis")
+										ui.label("Padding").style(f"width:{imgsize}px; height:{imgsize}px;").classes(f"text-white bg-secondary overflow-hidden text-ellipsis")
 								imgN=imgN+1
 								imgX=imgX+1
 						imgY=imgY+1
@@ -2444,55 +2458,55 @@ def quick_ui_layoutDisplay() -> None:
 				aMask_select=aMasq_circle
 				#ui.notify("Selected circle")
 			else:
-				button_AMcircle.props("color=positive")
+				button_AMcircle.props("color=secondary")
 			if select_alphamask=="blrcir":
 				button_AMblrcir.props("color=primary")
 				aMask_select=aMasq_blrcir
 				#ui.notify("Selected circle (blurred)")
 			else:
-				button_AMblrcir.props("color=positive")
+				button_AMblrcir.props("color=secondary")
 			if select_alphamask=="square":
 				button_AMsquare.props("color=primary")
 				aMask_select=aMasq_square
 				#ui.notify("Selected square (touching)")
 			else:
-				button_AMsquare.props("color=positive")
+				button_AMsquare.props("color=secondary")
 			if select_alphamask=="sqedge":
 				button_AMsqedge.props("color=primary")
 				aMask_select=aMasq_sqedge
 				#ui.notify("Selected square (touching)")
 			else:
-				button_AMsqedge.props("color=positive")
+				button_AMsqedge.props("color=secondary")
 			if select_alphamask=="blrsqr":
 				button_AMblrsqr.props("color=primary")
 				aMask_select=aMasq_blrsqr
 				#ui.notify("Selected square (blurred)")
 			else:
-				button_AMblrsqr.props("color=positive")
+				button_AMblrsqr.props("color=secondary")
 			if select_alphamask=="rndrec":
 				button_AMrndrec.props("color=primary")
 				aMask_select=aMasq_rndrec
 				#ui.notify("Selected rounded square")
 			else:
-				button_AMrndrec.props("color=positive")
+				button_AMrndrec.props("color=secondary")
 			if select_alphamask=="blrdrc":
 				button_AMblrdrc.props("color=primary")
 				aMask_select=aMasq_blrdrc
 				#ui.notify("Selected rounded square (blurred)")
 			else:
-				button_AMblrdrc.props("color=positive")
+				button_AMblrdrc.props("color=secondary")
 			if select_alphamask=="skdrec":
 				button_AMskdrec.props("color=primary")
 				aMask_select=aMasq_skdrec
 				#ui.notify("Selected skewed rectangle")
 			else:
-				button_AMskdrec.props("color=positive")
+				button_AMskdrec.props("color=secondary")
 			if select_alphamask=="blskrc":
 				button_AMblskrc.props("color=primary")
 				aMask_select=aMasq_blskrc
 				#ui.notify("Selected skewed rectangle (blurred)")
 			else:
-				button_AMblskrc.props("color=positive")
+				button_AMblskrc.props("color=secondary")
 
 		with ui.row(wrap=True):
 			button_AMcircle = ui.button(on_click=lambda:AMset("circle")).style("width:200px; height:200px;")
@@ -2549,7 +2563,7 @@ def quick_ui_sigDisplay() -> None:
 def quick_ui_sigExport() -> None:
 	if quick_export_flag:
 		ui.label("All done! If you don't wish to make any further changes, you can exit now.").style("max-width:550px;")
-		ui.button("Exit Application", on_click=lambda: exit_application()).style("width:200px;").props("color=secondary")
+		ui.button("Exit Application", on_click=lambda: exit_application()).style("width:200px;").props("color=negative")
 
 
 
@@ -2603,7 +2617,7 @@ def new_ui_imgSettings() -> None:
 			with ui.row():
 				ui.icon("o_announcement",color="primary", size="25px")
 				ui.label("All rows that contain photos will be included in your signature. Rows that contain only text will be ignored when generating a signature.").style("max-width:350px;")
-			ui.button("Close", on_click=help_new_photos_dialog.close, color="positive")
+			ui.button("Close", on_click=help_new_photos_dialog.close, color="secondary")
 
 	with ui.dialog() as help_new_names_dialog, ui.card().classes("bg-[#ffffff] dark:bg-[#18191e]"):
 		with ui.column().classes("items-center"):
@@ -2618,7 +2632,7 @@ def new_ui_imgSettings() -> None:
 			with ui.row():
 				ui.icon("o_announcement",color="primary", size="25px")
 				ui.label("Rows that contain only text and no photos will be ignored when generating a signature.").style("max-width:350px;")
-			ui.button("Close", on_click=help_new_names_dialog.close, color="positive")
+			ui.button("Close", on_click=help_new_names_dialog.close, color="secondary")
 
 	with ui.dialog() as help_new_epithets_dialog, ui.card().classes("bg-[#ffffff] dark:bg-[#18191e]"):
 		with ui.column().classes("items-center"):
@@ -2633,22 +2647,22 @@ def new_ui_imgSettings() -> None:
 			with ui.row():
 				ui.icon("o_announcement",color="primary", size="25px")
 				ui.label("Rows that contain only text and no photos will be ignored when generating a signature.").style("max-width:350px;")
-			ui.button("Close", on_click=help_new_epithets_dialog.close, color="positive")
+			ui.button("Close", on_click=help_new_epithets_dialog.close, color="secondary")
 
 	with ui.grid(columns="50px 160px 35px 160px 35px 160px 35px 50px").classes("items-center"):
 		ui.label(" ")
 		with ui.button_group().classes("col-span-2"):
 			with ui.button("Scan Folder",on_click=lambda:import_new_launch()).style("width:178px;").classes("rounded-r-none rounded-l"):
 				ui.tooltip("Scan the working directory for photos").props("max-width='200px'").classes("default_tooltip")
-			ui.button(icon="o_help_outline", on_click=help_new_photos_dialog.open, color="positive").style("width:35px;").classes("rounded-l-none rounded-r")
+			ui.button(icon="o_help_outline", on_click=help_new_photos_dialog.open, color="secondary").style("width:35px;").classes("rounded-l-none rounded-r")
 		with ui.button_group().classes("col-span-2"):
 			with ui.button("Read 'names.txt'",on_click=lambda:import_namesE()).style("width:178px;").classes("rounded-r-none rounded-l"):
 				ui.tooltip("Import names from the text file").props("max-width='200px'").classes("default_tooltip")
-			ui.button(icon="o_help_outline", on_click=help_new_names_dialog.open, color="positive").style("width:35px;").classes("rounded-l-none rounded-r")
+			ui.button(icon="o_help_outline", on_click=help_new_names_dialog.open, color="secondary").style("width:35px;").classes("rounded-l-none rounded-r")
 		with ui.button_group().classes("col-span-2"):
 			with ui.button("Read 'epithets.txt'",on_click=lambda:import_namesJ()).style("width:178px;").classes("rounded-r-none rounded-l"):
 				ui.tooltip("Import epithets from the text file").props("max-width='200px'").classes("default_tooltip")
-			ui.button(icon="o_help_outline", on_click=help_new_epithets_dialog.open, color="positive").style("width:35px;").classes("rounded-l-none rounded-r")
+			ui.button(icon="o_help_outline", on_click=help_new_epithets_dialog.open, color="secondary").style("width:35px;").classes("rounded-l-none rounded-r")
 		new_button_undoDisplay()
 	new_ui_characterlist()
 
@@ -2664,17 +2678,17 @@ def new_ui_characterlist() -> None:
 			ui.label("#")
 		with ui.column().classes("items-center"):
 			ui.label("Photo")
-		with ui.button(icon="o_delete", on_click=lambda: I_new_clear(), color="secondary").style("width:35px;"):
+		with ui.button(icon="o_delete", on_click=lambda: I_new_clear(), color="negative").style("width:35px;"):
 			ui.tooltip("Clear all photos").props("max-width='200px'").classes("default_tooltip")
 		with ui.row().classes("items-center"):
 			ui.space()
 			ui.label("Name")
-		with ui.button(icon="o_delete", on_click=lambda: namesE_clear(), color="secondary").style("width:35px;"):
+		with ui.button(icon="o_delete", on_click=lambda: namesE_clear(), color="negative").style("width:35px;"):
 			ui.tooltip("Clear all names").props("max-width='200px'").classes("default_tooltip")
 		with ui.row().classes("items-center"):
 			ui.space()
 			ui.label("Epithet")
-		with ui.button(icon="o_delete", on_click=lambda: namesJ_clear(), color="secondary").style("width:35px;"):
+		with ui.button(icon="o_delete", on_click=lambda: namesJ_clear(), color="negative").style("width:35px;"):
 			ui.tooltip("Clear all epithets").props("max-width='200px'").classes("default_tooltip")
 		#with ui.column().classes("items-center"):
 		#ui.label("Delete row")
@@ -2770,10 +2784,10 @@ def new_ui_characterlist() -> None:
 
 			# button to delete row
 			if len(I_new)>new_id:
-				with ui.button(icon="o_delete", on_click=lambda iid=new_id:row_new_delete(iid), color="secondary").style("width:50px; height:50px;"):
+				with ui.button(icon="o_delete", on_click=lambda iid=new_id:row_new_delete(iid), color="negative").style("width:50px; height:50px;"):
 					ui.tooltip("Delete entire row").props("max-width='200px'").classes("default_tooltip")
 			else:
-				ui.button(icon="o_delete", color="secondary").style("width:50px; height:50px;").props("disable")
+				ui.button(icon="o_delete", color="negative").style("width:50px; height:50px;").props("disable")
 			new_id=new_id+1
 			new_table_index.append(new_id)
 	while len(new_table_index)>len(namesE):
@@ -2796,28 +2810,28 @@ def new_ui_amaskselect():
 	with ui.row(wrap=True):
 		with ui.button(on_click=lambda: set_new_alphamask(aMask_circle)).style("width:200px; height:200px;") as button_new_AMcircle:
 			ui.image(aMasq_circle).props("width=170px height=170px")
-		with ui.button(on_click=lambda: set_new_alphamask(aMask_blrcir)).style("width:200px; height:200px;").props("color=positive") as button_new_AMblrcir:
+		with ui.button(on_click=lambda: set_new_alphamask(aMask_blrcir)).style("width:200px; height:200px;").props("color=secondary") as button_new_AMblrcir:
 			ui.image(aMasq_blrcir).props("width=170px height=170px")
-		with ui.button(on_click=lambda: set_new_alphamask(aMask_square)).style("width:200px; height:200px;").props("color=positive") as button_new_AMsquare:
+		with ui.button(on_click=lambda: set_new_alphamask(aMask_square)).style("width:200px; height:200px;").props("color=secondary") as button_new_AMsquare:
 			ui.image(aMasq_square).props("width=170px height=170px")
-		with ui.button(on_click=lambda: set_new_alphamask(aMask_sqedge)).style("width:200px; height:200px;").props("color=positive") as button_new_AMsqedge:
+		with ui.button(on_click=lambda: set_new_alphamask(aMask_sqedge)).style("width:200px; height:200px;").props("color=secondary") as button_new_AMsqedge:
 			ui.image(aMasq_sqedge).props("width=170px height=170px")
-		with ui.button(on_click=lambda: set_new_alphamask(aMask_blrsqr)).style("width:200px; height:200px;").props("color=positive") as button_new_AMblrsqr:
+		with ui.button(on_click=lambda: set_new_alphamask(aMask_blrsqr)).style("width:200px; height:200px;").props("color=secondary") as button_new_AMblrsqr:
 			ui.image(aMasq_blrsqr).props("width=170px height=170px")
-		with ui.button(on_click=lambda: set_new_alphamask(aMask_rndrec)).style("width:200px; height:200px;").props("color=positive") as button_new_AMrndrec:
+		with ui.button(on_click=lambda: set_new_alphamask(aMask_rndrec)).style("width:200px; height:200px;").props("color=secondary") as button_new_AMrndrec:
 			ui.image(aMasq_rndrec).props("width=170px height=170px")
-		with ui.button(on_click=lambda: set_new_alphamask(aMask_blrdrc)).style("width:200px; height:200px;").props("color=positive") as button_new_AMblrdrc:
+		with ui.button(on_click=lambda: set_new_alphamask(aMask_blrdrc)).style("width:200px; height:200px;").props("color=secondary") as button_new_AMblrdrc:
 			ui.image(aMasq_blrdrc).props("width=170px height=170px")
-		with ui.button(on_click=lambda: set_new_alphamask(aMask_skdrec)).style("width:200px; height:200px;").props("color=positive") as button_new_AMskdrec:
+		with ui.button(on_click=lambda: set_new_alphamask(aMask_skdrec)).style("width:200px; height:200px;").props("color=secondary") as button_new_AMskdrec:
 			ui.image(aMasq_skdrec).props("width=170px height=170px")
-		with ui.button(on_click=lambda: set_new_alphamask(aMask_blskrc)).style("width:200px; height:200px;").props("color=positive") as button_new_AMblskrc:
+		with ui.button(on_click=lambda: set_new_alphamask(aMask_blskrc)).style("width:200px; height:200px;").props("color=secondary") as button_new_AMblskrc:
 			ui.image(aMasq_blskrc).props("width=170px height=170px")
-		with ui.button(on_click=lambda: set_new_alphamask(aMask_custom)).style("width:200px; height:200px;").props("color=positive") as button_new_AMcustom:
+		with ui.button(on_click=lambda: set_new_alphamask(aMask_custom)).style("width:200px; height:200px;").props("color=secondary") as button_new_AMcustom:
 				new_ui_customAM()
 		button_new_AMcustom.set_visibility(False)
-		with ui.button(icon="o_add_circle_outline", on_click=lambda: import_alphamap()).style("width:200px; height:200px;").props("color=positive size=30px"):
+		with ui.button(icon="o_add_circle_outline", on_click=lambda: import_alphamap()).style("width:200px; height:200px;").props("color=secondary size=30px"):
 			ui.tooltip("Add custom alpha map").props("max-width='200px'").classes("default_tooltip")
-		with ui.button(icon="o_block", on_click=lambda: set_new_alphamask(aMask_ignore)).style("width:200px; height:200px;").props("color=positive size=30px") as button_new_AMignore:
+		with ui.button(icon="o_block", on_click=lambda: set_new_alphamask(aMask_ignore)).style("width:200px; height:200px;").props("color=secondary size=30px") as button_new_AMignore:
 			ui.tooltip("Use transparency from source image.").props("max-width='200px'").classes("default_tooltip")
 
 
@@ -2845,7 +2859,7 @@ def new_ui_fontSettings():
 			with ui.row():
 				ui.icon("o_announcement",color="primary", size="25px")
 				ui.label("When using non-alphanumeric scripts (e.g. Chinese, Japanese, Korean, etc.) for names/epithets, be sure to use a font that supports the corresponding script. The fonts bundled with this application mostly support Japanese scripts, but you will have to provide your own font(s) if you wish to use other scripts. If glyphs in the sample images appear garbled, missing, or as rectangles, this usually indicates that the selected font does not support the current script.").style("max-width:350px;")
-			ui.button("Close", on_click=help_new_fonts_dialog.close, color="positive")
+			ui.button("Close", on_click=help_new_fonts_dialog.close, color="secondary")
 
 	ui.label("If you want to apply a name and/or epithet to your photos, select a font below. Selecting 'false' means that no corresponding text will be applied.").style("max-width:550px;")
 	with ui.grid(columns="50px 160px 35px 160px 35px 160px 35px 50px"):#.classes("items-center"):
@@ -2855,7 +2869,7 @@ def new_ui_fontSettings():
 			names_priority = ui.radio(["Name", "Epithet"], value="Name", on_change=lambda:update_textsample())#.props("inline")
 		new_ui_fontEselect()
 		new_ui_fontJselect()
-		ui.button(icon="o_help_outline", on_click=help_new_fonts_dialog.open , color="positive").style("width:35px; height:35px;")
+		ui.button(icon="o_help_outline", on_click=help_new_fonts_dialog.open , color="secondary").style("width:35px; height:35px;")
 
 		ui.label(" ").classes("col-span-3")
 		with ui.column().classes("col-span-2"):
@@ -2863,14 +2877,14 @@ def new_ui_fontSettings():
 				with ui.button("Text Color", icon="o_format_color_text").style("width:150px;"):
 					new_picker_Emain = ui.color_picker(on_pick=lambda e: set_colorEmain(e.color)).style("width:200px")
 					new_picker_Emain.q_color.props(f"default-view=palette model-value={colorEmain}")
-				with ui.button(icon="o_palette", on_click=lambda:set_colorEmain("#ff6065"), color="positive").style("width:50px;"):
+				with ui.button(icon="o_palette", on_click=lambda:set_colorEmain("#ff6065"), color="secondary").style("width:50px;"):
 					ui.tooltip("Default color").props("max-width='200px'").classes("default_tooltip")
 		with ui.column().classes("col-span-2"):
 			with ui.button_group():
 				with ui.button("Text Color", icon="o_format_color_text").style("width:150px;"):
 					new_picker_Jmain = ui.color_picker(on_pick=lambda e: set_colorJmain(e.color)).style("width:200px")
 					new_picker_Jmain.q_color.props(f"default-view=palette model-value={colorJmain}")
-				with ui.button(icon="o_content_copy", on_click=lambda:set_colorJmain(colorEmain), color="positive").style("width:50px;"):
+				with ui.button(icon="o_content_copy", on_click=lambda:set_colorJmain(colorEmain), color="secondary").style("width:50px;"):
 					ui.tooltip("Copy current text color from names").props("max-width='200px'").classes("default_tooltip")
 		ui.label(" ")
 
@@ -2898,7 +2912,7 @@ def new_ui_fontSettings():
 						new_picker_Eoutline.q_color.props(f"default-view=palette model-value={colorEoutline}")
 					else:
 						new_picker_Eoutline.q_color.props("default-view=palette")
-				with ui.button(icon="o_format_color_reset", on_click=lambda:set_colorEoutline(False), color="secondary").style("width:50px;"):
+				with ui.button(icon="o_format_color_reset", on_click=lambda:set_colorEoutline(False), color="negative").style("width:50px;"):
 					ui.tooltip("No text outline").props("max-width='200px'").classes("default_tooltip")
 		with ui.column().classes("col-span-2"):
 			with ui.row().classes("items-center"):
@@ -2914,9 +2928,9 @@ def new_ui_fontSettings():
 						new_picker_Joutline.q_color.props(f"default-view=palette model-value={colorJoutline}")
 					else:
 						new_picker_Joutline.q_color.props("default-view=palette")
-				with ui.button(icon="o_content_copy", on_click=lambda:set_colorJoutline(colorEoutline), color="positive").style("width:35px;"):
+				with ui.button(icon="o_content_copy", on_click=lambda:set_colorJoutline(colorEoutline), color="secondary").style("width:35px;"):
 					ui.tooltip("Copy current outline color from names").props("max-width='200px'").classes("default_tooltip")
-				with ui.button(icon="o_format_color_reset", on_click=lambda:set_colorJoutline(False), color="secondary").style("width:35px;"):
+				with ui.button(icon="o_format_color_reset", on_click=lambda:set_colorJoutline(False), color="negative").style("width:35px;"):
 					ui.tooltip("No text outline").props("max-width='200px'").classes("default_tooltip")
 		ui.label(" ")
 
@@ -3029,7 +3043,7 @@ def new_ui_fontAlignment():
 			with ui.row():
 				ui.icon("o_announcement",color="primary", size="25px")
 				ui.label("The margin setting will be ignored if 'Oversized Text Handling' is set to 'Ignore'.").style("max-width:350px;")
-			ui.button("Close", on_click=help_new_alignment_dialog.close, color="positive")
+			ui.button("Close", on_click=help_new_alignment_dialog.close, color="secondary")
 
 	with ui.grid(columns = "50px 160px 35px 160px 35px 160px 35px 50px").classes("items-center"):
 		ui.label(" ")
@@ -3094,7 +3108,7 @@ def new_ui_fontAlignment():
 			slider_nameJoffsety = ui.slider(min=-50,max=50,value=0, on_change=lambda:update_imagesample()).props("vertical reverse").style("height:160px;")
 			ui.element("spacer").style("height:5px;")
 			ui.label().bind_text_from(slider_nameJoffsety,'value')
-		ui.button(icon="o_help_outline", on_click=help_new_alignment_dialog.open, color="positive").style("width:35px; height:35px;")
+		ui.button(icon="o_help_outline", on_click=help_new_alignment_dialog.open, color="secondary").style("width:35px; height:35px;")
 		ui.label(" ")
 		ui.label("Offset (Sliders):").classes("col-span-2")
 		slider_nameEoffsetx = ui.slider(min=-50,max=50,value=0, on_change=lambda:update_imagesample())
@@ -3250,11 +3264,11 @@ def new_ui_sigDisplay() -> None:
 	if new_updated_flag and new_generated_flag:
 		ui.label("Use the buttons below to save your preferred version of the signature image(s) in the 'signatures' subfolder. Previously exported files may get overwritten!").style("max-width:550px;")
 		with ui.row():
-			with ui.button("Export Default", icon="o_save", on_click=lambda:save_newsig_scaled()).style("width:200px;"):
+			with ui.button("Export Default", icon="o_save", color="positive", on_click=lambda:save_newsig_scaled()).style("width:200px;"):
 				ui.tooltip("Export the images in a size that can be used as a signature.").props("max-width='200px'").classes("default_tooltip")
-			with ui.button("Export Full Size", color="positive", on_click=lambda:save_newsig_fullsize()).style("width:200px;"):
+			with ui.button("Export Full Size", color="primary", on_click=lambda:save_newsig_fullsize()).style("width:200px;"):
 				ui.tooltip("Export the images in full resolution. You may not be able to use them as a signature like this!").props("max-width='200px'").classes("default_tooltip")
-			with ui.button("Export Individual", color="positive", on_click=lambda:save_newsig_single()).style("width:200px;"):
+			with ui.button("Export Individual", color="primary", on_click=lambda:save_newsig_single()).style("width:200px;"):
 				ui.tooltip("Export all individual sub-images in full resolution. - For use in other software. You may not be able to use them as a signature like this!").props("max-width='200px'").classes("default_tooltip")
 
 
@@ -3266,7 +3280,8 @@ def page():
 	global new_image_layout
 	global button_set_photoaspect
 
-	ui.colors(primary="#ff6065", secondary="#896566", accent="#e4e2e2", positive="#6b6868")
+	#ui.colors(primary="#ff6065", secondary="#896566", accent="#e4e2e2", positive="#6b6868")
+	ui.colors(primary="#ff6065", secondary="#6b6868", accent="#e4e2e2", positive="#50cbc8", negative="#896566")
 	dark_mode=ui.dark_mode()
 	dark_mode.enable()
 	#ui.query("body").classes("bg-[#f2f0f0] dark:bg-[#121212]")
@@ -3286,7 +3301,7 @@ def page():
 		with ui.button(icon="o_nights_stay",color="secondary",on_click=dark_mode.toggle).style("width:40px; height:40px"):
 			ui.tooltip("Toggle dark mode").props("max-width='200px'").classes("default_tooltip")
 		ui.element("spacer").style("width:15px;")
-		with ui.button(icon="o_close",color="secondary",on_click=lambda:exit_application()).style("width:40px; height:40px"):
+		with ui.button(icon="o_close",color="negative",on_click=lambda:exit_application()).style("width:40px; height:40px"):
 			ui.tooltip("Exit application").props("max-width='200px'").classes("default_tooltip")
 		ui.element("spacer").style("width:15px;")
 
@@ -3296,7 +3311,7 @@ def page():
 
 	## Quick Sig Panel
 
-		with ui.tab_panel("Quick Sig").classes("bg-[#f2f0f1] dark:bg-[#1e1f24] rounded-lg dark:rounded-lg"):
+		with ui.tab_panel("Quick Sig").classes("bg-[#f2f0f1] dark:bg-[#1e1f24] rounded-lg dark:rounded-lg mx-auto").style("max-width:1100px;"):
 			ui.label("QUICKLY GENERATE A SIMPLE SIGNATURE")
 			with ui.row(wrap=True):
 				ui.label("How to use:")
@@ -3312,7 +3327,7 @@ def page():
 
 	## Create New Panel
 
-		with ui.tab_panel("Create New").classes("bg-[#f2f0f1] dark:bg-[#1e1f24] rounded-lg dark:rounded-lg"):
+		with ui.tab_panel("Create New").classes("bg-[#f2f0f1] dark:bg-[#1e1f24] rounded-lg dark:rounded-lg mx-auto").style("max-width:1100px;"):
 			ui.label("GENERATE A NEW SIGNATURE FROM SCRATCH")
 			ui.label("First, select the aspect ratio for the photos that will be included in your signature. If you change this later on, all previously imported photos will be reloaded automatically.").style("max-width:550px;")
 
@@ -3340,14 +3355,14 @@ def page():
 					with ui.row():
 						ui.icon("o_announcement",color="primary", size="25px")
 						ui.label("For each doll directory page, you only need to add the link once. Even if you change the photos in the doll directory later, the directory import will always import the most up-to-date photos.").style("max-width:350px;")
-					ui.button("Close", on_click=help_new_directory_dialog.close, color="positive")
+					ui.button("Close", on_click=help_new_directory_dialog.close, color="secondary")
 
 			with ui.row():
 				ui.element("spacer").style("width:50px;")
 				with ui.button_group().classes("col-span-3"):
 					with ui.button("Directory Import", icon="o_contact_page",on_click=lambda: directory_import()).style("width:200px;").classes("rounded-r-none rounded-l"):
 						ui.tooltip("Import photos from the Doll Directory").props("max-width='200px'").classes("default_tooltip")
-					ui.button(icon="o_help_outline", on_click=help_new_directory_dialog.open, color="positive").style("width:35px;").classes("rounded-l-none rounded-r")
+					ui.button(icon="o_help_outline", on_click=help_new_directory_dialog.open, color="secondary").style("width:35px;").classes("rounded-l-none rounded-r")
 
 			ui.separator()
 
@@ -3374,7 +3389,7 @@ def page():
 
 	## Load Config Panel
 		'''
-		with ui.tab_panel("Load Config"):
+		with ui.tab_panel("Load Config").style("max-width:1100px;"):
 			ui.label("LOAD AND EDIT A PREVIOUSLY SAVED CONFIG FILE")
 
 			ui.label("This function is not available yet.")
@@ -3382,8 +3397,8 @@ def page():
 
 
 
-ui.run() #comment out for building
-#ui.run(reload=False, port=native.find_open_port()) #comment in for building
+ui.run(favicon="💬")     #comment out for building
+#ui.run(reload=False, favicon="💬", port=native.find_open_port())     #comment in for building
 
 ## Remove temporary files at the end
 try:
