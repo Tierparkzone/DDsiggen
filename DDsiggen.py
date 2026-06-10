@@ -11,12 +11,13 @@ from base64 import b64encode
 import os
 import re
 import math
+import json
 import asyncio
 import requests
 #import sys     #macOS packaging support - comment in before building for mac
 
 #Version Number
-version_no = "3.11"
+version_no = "3.12"
 
 # macOS packaging support - comment in the below lines before building for mac
 #if getattr(sys, 'frozen', False):
@@ -1740,7 +1741,7 @@ async def I_new_cropimage(entry_nr):
 	maxzoom = min(maxzoom,3)
 
 	if I_metadata[entry_nr][3]:
-		print(I_metadata[entry_nr][3])
+		#print(I_metadata[entry_nr][3])
 		viewp_xoff = -I_metadata[entry_nr][3].get("x_offset")
 		viewp_yoff = -I_metadata[entry_nr][3].get("y_offset")
 		currentzoom = I_metadata[entry_nr][3].get("zoom")
@@ -1764,7 +1765,7 @@ async def I_new_cropimage(entry_nr):
 			with ui.row():
 				ui.label("X-Offset:")
 				ui.label().bind_text_from(viewsettings,"x_offset")
-				ui.label("X-Offset:")
+				ui.label("Y-Offset:")
 				ui.label().bind_text_from(viewsettings,"y_offset")
 			ui.label("Overlay")
 			radio_select_overlay = ui.radio(["None","Grid","Circles"],value="None", on_change=lambda e: switchoverlay(e.value)).props("inline")
@@ -2155,6 +2156,18 @@ def update_imagesample():
 	#new_ui_imageSample.refresh()
 
 
+def save_settings(filename):
+	#global transpEmain
+	#global transpJmain
+	#"aMask_select": aMask_select,
+	try:
+		with open(f"{filename}.json", "w") as savefile:
+			json.dump([{"names_priority": names_priority.value, "fontE": fontE.value, "colorEmain": colorEmain, "transpEmain": transpEmain, "sizeEmain": sizeEmain, "colorEoutline": colorEoutline, "transpEoutline": transpEoutline, "sizeEoutline": sizeEoutline, "fontJ": fontJ.value, "colorJmain": colorJmain, "transpJmain": transpJmain, "sizeJmain": sizeJmain, "colorJoutline": colorJoutline, "transpJoutline": transpJoutline, "sizeJoutline": sizeJoutline, "new_handle_oversize": new_handle_oversize.value, "oversize_margin": oversize_margin, "nameEalignX": nameEalignX, "nameEalignY": nameEalignY, "nameEoffsetX": nameEoffsetX, "nameEoffsetY": nameEoffsetY, "nameJalignX": nameJalignX, "nameJalignY": nameJalignY, "nameJoffsetX": nameJoffsetX, "nameJoffsetY": nameJoffsetY, "ISshadowE": ISshadowE, "shadowEoffsetX": shadowEoffsetX, "shadowEoffsetY": shadowEoffsetY, "shadowEblur": shadowEblur, "ISglowE": ISglowE, "colorEglow": colorEglow, "glowEoffsetX": glowEoffsetX, "glowEoffsetY": glowEoffsetY, "glowEblur": glowEblur, "ISshadowJ": ISshadowJ, "shadowJoffsetX": shadowJoffsetX, "shadowJoffsetY": shadowJoffsetY, "shadowJblur": shadowJblur, "ISglowJ": ISglowJ, "colorJglow": colorJglow, "glowJoffsetX": glowJoffsetX, "glowJoffsetY": glowJoffsetY, "glowJblur": glowJblur,}], savefile)
+	except:
+		ui.notify("Text settings could not be saved.")
+	else:
+		ui.notify(f"Text settings saved to '{filename}.json'")
+
 def exit_application():
 	with ui.dialog().props("persistent maximized") as exit_dialog, ui.card().classes("bg-[#ffffff] dark:bg-[#18191e]"):
 		ui.label("Application terminated! You can now close this browser tab.")
@@ -2240,6 +2253,19 @@ nameJalignY = "bottom"
 nameJoffsetX = 0
 nameJoffsetY = 0
 oversize_margin = 0
+
+transpEmain = "ff"
+transpJmain = "ff"
+transpEoutline ="ff"
+transpJoutline ="ff"
+shadowEoffsetX = 2
+shadowEoffsetY = -2
+shadowJoffsetX = 2
+shadowJoffsetY = -2
+glowEoffsetX = 2
+glowEoffsetY = -2
+glowJoffsetX = 2
+glowJoffsetY = -2
 
 ISshadowE = False
 ISshadowJ = False
@@ -3298,12 +3324,15 @@ def page():
 		ui.space()
 		ui.label(f"Tierparkzone's Forum Signature Generator - ver.{version_no}")
 		ui.element("spacer").style("width:25px;")
+		with ui.button(icon="o_save",color="secondary",on_click=lambda: save_settings("textsettings")).style("width:40px; height:40px"):
+			ui.tooltip("Save text settings").props("max-width='200px'").classes("default_tooltip")
+		ui.element("spacer").style("width:15px;")
 		with ui.button(icon="o_nights_stay",color="secondary",on_click=dark_mode.toggle).style("width:40px; height:40px"):
 			ui.tooltip("Toggle dark mode").props("max-width='200px'").classes("default_tooltip")
 		ui.element("spacer").style("width:15px;")
 		with ui.button(icon="o_close",color="negative",on_click=lambda:exit_application()).style("width:40px; height:40px"):
 			ui.tooltip("Exit application").props("max-width='200px'").classes("default_tooltip")
-		ui.element("spacer").style("width:15px;")
+		ui.element("spacer").style("width:5px;")
 
 	with ui.tab_panels(modeSelect, value="Quick Sig").classes("w-full bg-[#ffffff] dark:bg-[#18191e]"):
 
