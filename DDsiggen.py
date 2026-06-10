@@ -17,7 +17,7 @@ import requests
 #import sys     #macOS packaging support - comment in before building for mac
 
 #Version Number
-version_no = "3.12"
+version_no = "3.13"
 
 # macOS packaging support - comment in the below lines before building for mac
 #if getattr(sys, 'frozen', False):
@@ -2168,6 +2168,145 @@ def save_settings(filename):
 	else:
 		ui.notify(f"Text settings saved to '{filename}.json'")
 
+def load_settings(filename):
+	global colorEmain
+	global transpEmain
+	global sizeEmain
+	global colorEoutline
+	global transpEoutline
+	global sizeEoutline
+	global colorJmain
+	global transpJmain
+	global sizeJmain
+	global colorJoutline
+	global transpJoutline
+	global sizeJoutline
+	global oversize_margin
+	global nameEalignX
+	global nameEalignY
+	global nameEoffsetX
+	global nameEoffsetY
+	global nameJalignX
+	global nameJalignY
+	global nameJoffsetX
+	global nameJoffsetY
+	global ISshadowE
+	global shadowEoffsetX
+	global shadowEoffsetY
+	global shadowEblur
+	global ISglowE
+	global colorEglow
+	global glowEoffsetX
+	global glowEoffsetY
+	global glowEblur
+	global ISshadowJ
+	global shadowJoffsetX
+	global shadowJoffsetY
+	global shadowJblur
+	global ISglowJ
+	global colorJglow
+	global glowJoffsetX
+	global glowJoffsetY
+	global glowJblur
+	if I_new == []:
+		ui.notify("Please import some images first!")
+		return
+	with open(f"{filename}.json","r") as loadfile:
+		loaded_settings = json.load(loadfile)
+	names_priority.value = loaded_settings[0]["names_priority"]
+	if loaded_settings[0]["fontE"] in fonts_list:
+		fontE.value = loaded_settings[0]["fontE"]
+	else:
+		fontE.value = False
+		ui.notify(f"Font '{loaded_settings[0]["fontE"]}' not found!")
+	colorEmain = loaded_settings[0]["colorEmain"]
+	new_picker_Emain.q_color.props(f"model-value={colorEmain}")
+	transpEmain = loaded_settings[0]["transpEmain"]
+	slider_transpEmain.value = math.floor(int(transpEmain,16)/2.55)
+	sizeEmain = loaded_settings[0]["sizeEmain"]
+	slider_sizeEmain.value = sizeEmain
+	colorEoutline = loaded_settings[0]["colorEoutline"]
+	if colorEoutline:
+		new_picker_Eoutline.q_color.props(f"model-value={colorEoutline}")
+	transpEoutline = loaded_settings[0]["transpEoutline"]
+	slider_transpEoutline.value = math.floor(int(transpEoutline,16)/2.55)
+	sizeEoutline = loaded_settings[0]["sizeEoutline"]
+	slider_sizeEoutline.value = sizeEoutline
+	if loaded_settings[0]["fontJ"] in fonts_list:
+		fontJ.value = loaded_settings[0]["fontJ"]
+	else:
+		fontJ.value = False
+		ui.notify(f"Font '{loaded_settings[0]["fontJ"]}' not found!")
+	colorJmain = loaded_settings[0]["colorJmain"]
+	new_picker_Jmain.q_color.props(f"model-value={colorJmain}")
+	transpJmain = loaded_settings[0]["transpJmain"]
+	slider_transpJmain.value = math.floor(int(transpJmain,16)/2.55)
+	sizeJmain = loaded_settings[0]["sizeJmain"]
+	slider_sizeJmain.value = sizeJmain
+	colorJoutline = loaded_settings[0]["colorJoutline"]
+	if colorJoutline:
+		new_picker_Joutline.q_color.props(f"model-value={colorJoutline}")
+	transpJoutline = loaded_settings[0]["transpJoutline"]
+	slider_transpJoutline.value = math.floor(int(transpJoutline,16)/2.55)
+	sizeJoutline = loaded_settings[0]["sizeJoutline"]
+	slider_sizeJoutline.value = sizeJoutline
+	new_handle_oversize.value = loaded_settings[0]["new_handle_oversize"]
+	oversize_margin = loaded_settings[0]["oversize_margin"]
+	slider_oversize_margin.value = oversize_margin
+	nameEalignX = loaded_settings[0]["nameEalignX"]
+	nameEalignY = loaded_settings[0]["nameEalignY"]
+	nameEoffsetX = loaded_settings[0]["nameEoffsetX"]
+	slider_nameEoffsetx.value = nameEoffsetX
+	nameEoffsetY = loaded_settings[0]["nameEoffsetY"]
+	slider_nameEoffsety.value = nameEoffsetY
+	nameJalignX = loaded_settings[0]["nameJalignX"]
+	nameJalignY = loaded_settings[0]["nameJalignY"]
+	nameJoffsetX = loaded_settings[0]["nameJoffsetX"]
+	slider_nameJoffsetx.value = nameJoffsetX
+	nameJoffsetY = loaded_settings[0]["nameJoffsetY"]
+	slider_nameJoffsety.value = nameJoffsetY
+	ISshadowE = loaded_settings[0]["ISshadowE"]
+	check_textEshadow.value = ISshadowE
+	shadowEoffsetX = loaded_settings[0]["shadowEoffsetX"]
+	slider_shadowEoffsetX.value = shadowEoffsetX
+	shadowEoffsetY = loaded_settings[0]["shadowEoffsetY"]
+	slider_shadowEoffsetY.value = shadowEoffsetY
+	shadowEblur = loaded_settings[0]["shadowEblur"]
+	slider_shadowEblur.value = shadowEblur
+	ISglowE = loaded_settings[0]["ISglowE"]
+	check_textEglow.value = ISglowE
+	colorEglow = loaded_settings[0]["colorEglow"]
+	if colorEglow:
+		new_picker_Eglow.q_color.props(f"model-value={colorEglow}")
+	glowEoffsetX = loaded_settings[0]["glowEoffsetX"]
+	slider_glowEoffsetX.value = glowEoffsetX
+	glowEoffsetY = loaded_settings[0]["glowEoffsetY"]
+	slider_glowEoffsetY.value = glowEoffsetY
+	glowEblur = loaded_settings[0]["glowEblur"]
+	slider_glowEblur.value = glowEblur
+	ISshadowJ = loaded_settings[0]["ISshadowJ"]
+	check_textJshadow.value = ISshadowJ
+	shadowJoffsetX = loaded_settings[0]["shadowJoffsetX"]
+	slider_shadowJoffsetX.value = shadowJoffsetX
+	shadowJoffsetY = loaded_settings[0]["shadowJoffsetY"]
+	slider_shadowJoffsetY.value = shadowJoffsetY
+	shadowJblur = loaded_settings[0]["shadowJblur"]
+	slider_shadowJblur.value = shadowJblur
+	ISglowJ = loaded_settings[0]["ISglowJ"]
+	check_textJglow.value = ISglowJ
+	colorJglow = loaded_settings[0]["colorJglow"]
+	if colorJglow:
+		new_picker_Jglow.q_color.props(f"model-value={colorJglow}")
+	glowJoffsetX = loaded_settings[0]["glowJoffsetX"]
+	slider_glowJoffsetX.value = glowJoffsetX
+	glowJoffsetY = loaded_settings[0]["glowJoffsetY"]
+	slider_glowJoffsetY.value = glowJoffsetY
+	glowJblur = loaded_settings[0]["glowJblur"]
+	slider_glowJblur.value = glowJblur
+	#print(loaded_settings)
+	update_textsample()
+	ui.notify(f"Settings loaded from '{filename}.json'")
+
 def exit_application():
 	with ui.dialog().props("persistent maximized") as exit_dialog, ui.card().classes("bg-[#ffffff] dark:bg-[#18191e]"):
 		ui.label("Application terminated! You can now close this browser tab.")
@@ -3057,6 +3196,10 @@ def new_ui_fontAlignment():
 	global slider_glowJoffsetX
 	global slider_glowJoffsetY
 	global slider_glowJblur
+	global check_textEshadow
+	global check_textEglow
+	global check_textJshadow
+	global check_textJglow
 	global new_handle_oversize
 	global new_picker_Eglow
 	global new_picker_Jglow
@@ -3324,6 +3467,9 @@ def page():
 		ui.space()
 		ui.label(f"Tierparkzone's Forum Signature Generator - ver.{version_no}")
 		ui.element("spacer").style("width:25px;")
+		with ui.button(icon="o_file_open",color="secondary",on_click=lambda: load_settings("textsettings")).style("width:40px; height:40px"):
+			ui.tooltip("Load text settings").props("max-width='200px'").classes("default_tooltip")
+		ui.element("spacer").style("width:15px;")
 		with ui.button(icon="o_save",color="secondary",on_click=lambda: save_settings("textsettings")).style("width:40px; height:40px"):
 			ui.tooltip("Save text settings").props("max-width='200px'").classes("default_tooltip")
 		ui.element("spacer").style("width:15px;")
