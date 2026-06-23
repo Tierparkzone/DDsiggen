@@ -8,6 +8,7 @@ from PIL import ImageOps, Image, ImageDraw, ImageTransform, ImageFilter, ImageFo
 from pathlib import Path
 from io import BytesIO
 from base64 import b64encode
+from urllib.parse import unquote
 import os
 import re
 import math
@@ -17,7 +18,7 @@ import requests
 #import sys     #macOS packaging support - comment in before building for mac
 
 #Version Number
-version_no = "3.13"
+version_no = "3.15"
 
 # macOS packaging support - comment in the below lines before building for mac
 #if getattr(sys, 'frozen', False):
@@ -203,7 +204,7 @@ async def import_from_url():
 		newurl = ui.input(label="Enter image URL:").style("width:400px;")
 		with ui.row():
 			ui.button("Import",on_click=lambda: import_url_dialog.submit(newurl.value)).style("width:200px;")
-			ui.button("Cancel",on_click=lambda: import_url_dialog.submit(False)).props("color=positive").style("width:200px;")
+			ui.button("Cancel",on_click=lambda: import_url_dialog.submit(False)).props("color=secondary").style("width:200px;")
 
 	global new_updated_flag
 	global new_undoable_flag
@@ -372,6 +373,100 @@ async def directory_import():
 		#ui.notify("Import from doll directory successful!")
 		print("Import from doll directory complete!")
 
+
+async def directory_build():
+	old_dolls = []
+	try:
+		f_dolls = open("doll_directory.txt","r",encoding="utf-8")
+	except:
+		directory_exists = False
+	else:
+		directory_exists = True
+		list_dolls = f_dolls.readlines()
+		f_dolls.close()
+		list_dolls = [i.rstrip() for i in list_dolls]
+		for doll in list_dolls:
+			start = doll.find("-")+1
+			if start:
+				old_dolls.append(unquote(doll[start:-1]))
+
+	with ui.dialog().props("persistent") as view_directory_dialog, ui.card().classes("bg-[#ffffff] dark:bg-[#18191e]"):
+			with ui.column().classes("items-center"):
+				if directory_exists:
+					if old_dolls:
+						ui.label("Links to the following doll(s) were found in 'doll_directory.txt':")
+						with ui.scroll_area().classes("width-380px height-200px border"):
+							for doll in old_dolls:
+								ui.label(doll)
+						ui.label("You can import links to additional dolls or replace the old ones.")
+					else:
+						ui.label("The file 'doll_directory.txt' appears to not contain any valid doll directory links. You can use this tool to import new links.")
+						ui.label("If you believe that the file should already contain valid links, please click 'Cancel' and review the contents of the file manually.")
+				else:
+					ui.label("No file named 'doll_directory.txt' was found! You can use this tool to create it and import new doll directory links.")
+				with ui.row():
+					ui.button("Start Import",on_click=lambda: view_directory_dialog.submit(False)).style("width:200px;")
+					ui.button("Cancel",on_click=lambda: view_directory_dialog.submit(True)).props("color=secondary").style("width:200px;")
+	is_abort = await view_directory_dialog
+	if is_abort:
+		return
+
+	with ui.dialog().props("persistent") as import_html_dialog, ui.card().classes("bg-[#ffffff] dark:bg-[#18191e]"):
+		with ui.column().classes("items-center"):
+			ui.label("Go to your profile page on the DollDreaming forum and click on the 'Dolls' tab.")
+			ui.label("Right-click and select 'View page source' or an equivalent option (exact wording may depend on your browser).")
+			ui.label("Select the entire source text (Ctrl+A), then copy (Ctrl+C) and paste it (Ctrl+V) into the window below.")
+			input_directory_source = ui.textarea(placeholder='Paste the source code here...').style("width:380px;").classes("border")
+			with ui.row():
+				ui.button("Look for Dolls",on_click=lambda: import_html_dialog.submit(input_directory_source.value)).style("width:200px;")
+				ui.button("Cancel",on_click=lambda: import_html_dialog.submit(False)).props("color=secondary").style("width:200px;")
+	directory_source = await import_html_dialog
+	if not directory_source:
+		return
+	new_dolls=[]
+	dollurls = re.findall(r"https://www.dolldreaming.com/collections/item/.*/' title",directory_source)
+	for idx, doll in enumerate(dollurls):
+		dollurls[idx]=doll.rstrip("' title")
+	for doll in dollurls:
+		start = doll.find("-")+1
+		if start:
+			new_dolls.append(unquote(doll[start:-1]))
+		else:
+			print("Something went wrong! Aborting...")
+			ui.notify("Something went wrong! Aborting...")
+			return
+	#print(new_dolls)
+
+	with ui.dialog().props("persistent") as append_directory_dialog, ui.card().classes("bg-[#ffffff] dark:bg-[#18191e]"):
+			with ui.column().classes("items-center"):
+				if new_dolls:
+					ui.label("Found new links to the following doll(s):")
+					with ui.scroll_area().classes("width-380px height-200px border"):
+						for doll in new_dolls:
+							ui.label(doll)
+					if old_dolls:
+						ui.label("You can overwrite your existing links or append the new ones.")
+						ui.button("Overwrite",on_click=lambda: append_directory_dialog.submit("remake")).style("width:200px;")
+						ui.button("Append",on_click=lambda: append_directory_dialog.submit("append")).style("width:200px;")
+					else:
+						ui.label("Click 'GENERATE FILE' to (re)create the 'doll_directory.txt' file with the new links.")
+						ui.button("Generate File",on_click=lambda: append_directory_dialog.submit("remake")).style("width:200px;")
+					ui.button("Cancel",on_click=lambda: append_directory_dialog.submit("cancel")).props("color=secondary").style("width:200px;")
+				else:
+					ui.label("No valid links to any dolls were found.")
+					ui.button("Close",on_click=lambda: append_directory_dialog.submit("cancel")).props("color=secondary").style("width:200px;")
+	import_mode = await append_directory_dialog
+	if import_mode == "cancel":
+		return
+	elif import_mode == "append":
+		dollurls = list_dolls + dollurls
+		dollurls = list(dict.fromkeys(dollurls))
+	f_dolls = open("doll_directory.txt","w",encoding="utf-8")
+	for doll in dollurls:
+		f_dolls.write(f"{doll}\n")
+	f_dolls.close()
+	print("Directory file updated!")
+	ui.notify("Links written to 'doll_directory.txt'.")
 
 #Import other data
 
@@ -2004,6 +2099,14 @@ def set_custom_rows(n_rows):
 
 #Extra Functionality
 
+def toggle_darkmode():
+	global dark_mode
+	dark_mode.toggle()
+	if dark_mode.value:
+		ui.colors(primary="#a53d40", secondary="#6b6868", accent="#e4e2e2", positive="#398c8a", negative="#634849")
+	else:
+		ui.colors(primary="#ff6065", secondary="#6b6868", accent="#e4e2e2", positive="#50cbc8", negative="#896566")
+
 async def adjustaspect(newaspect):
 	global photowidth
 	global photoaspect
@@ -3448,9 +3551,11 @@ def new_ui_sigDisplay() -> None:
 def page():
 	global new_image_layout
 	global button_set_photoaspect
+	global dark_mode
 
 	#ui.colors(primary="#ff6065", secondary="#896566", accent="#e4e2e2", positive="#6b6868")
-	ui.colors(primary="#ff6065", secondary="#6b6868", accent="#e4e2e2", positive="#50cbc8", negative="#896566")
+	#ui.colors(primary="#ff6065", secondary="#6b6868", accent="#e4e2e2", positive="#50cbc8", negative="#896566")
+	ui.colors(primary="#a53d40", secondary="#6b6868", accent="#e4e2e2", positive="#398c8a", negative="#634849")
 	dark_mode=ui.dark_mode()
 	dark_mode.enable()
 	#ui.query("body").classes("bg-[#f2f0f0] dark:bg-[#121212]")
@@ -3467,14 +3572,14 @@ def page():
 		ui.space()
 		ui.label(f"Tierparkzone's Forum Signature Generator - ver.{version_no}")
 		ui.element("spacer").style("width:25px;")
+		with ui.button(icon="o_nights_stay",color="secondary",on_click=lambda: toggle_darkmode()).style("width:40px; height:40px"):
+			ui.tooltip("Toggle dark mode").props("max-width='200px'").classes("default_tooltip")
+		ui.element("spacer").style("width:15px;")
 		with ui.button(icon="o_file_open",color="secondary",on_click=lambda: load_settings("textsettings")).style("width:40px; height:40px"):
 			ui.tooltip("Load text settings").props("max-width='200px'").classes("default_tooltip")
 		ui.element("spacer").style("width:15px;")
 		with ui.button(icon="o_save",color="secondary",on_click=lambda: save_settings("textsettings")).style("width:40px; height:40px"):
 			ui.tooltip("Save text settings").props("max-width='200px'").classes("default_tooltip")
-		ui.element("spacer").style("width:15px;")
-		with ui.button(icon="o_nights_stay",color="secondary",on_click=dark_mode.toggle).style("width:40px; height:40px"):
-			ui.tooltip("Toggle dark mode").props("max-width='200px'").classes("default_tooltip")
 		ui.element("spacer").style("width:15px;")
 		with ui.button(icon="o_close",color="negative",on_click=lambda:exit_application()).style("width:40px; height:40px"):
 			ui.tooltip("Exit application").props("max-width='200px'").classes("default_tooltip")
@@ -3535,8 +3640,10 @@ def page():
 			with ui.row():
 				ui.element("spacer").style("width:50px;")
 				with ui.button_group().classes("col-span-3"):
-					with ui.button("Directory Import", icon="o_contact_page",on_click=lambda: directory_import()).style("width:200px;").classes("rounded-r-none rounded-l"):
+					with ui.button("Directory Import", icon="o_contact_page", on_click=lambda: directory_import()).style("width:200px;").classes("rounded-r-none rounded-l"):
 						ui.tooltip("Import photos from the Doll Directory").props("max-width='200px'").classes("default_tooltip")
+					with ui.button("Generate File", on_click=lambda: directory_build()).style("width:200px;").classes("rounded-none"):
+						ui.tooltip("Import new links into your 'doll_directory.txt' file").props("max-width='200px'").classes("default_tooltip")
 					ui.button(icon="o_help_outline", on_click=help_new_directory_dialog.open, color="secondary").style("width:35px;").classes("rounded-l-none rounded-r")
 
 			ui.separator()
