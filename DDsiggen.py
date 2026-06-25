@@ -18,7 +18,7 @@ import requests
 #import sys     #macOS packaging support - comment in before building for mac
 
 #Version Number
-version_no = "3.15"
+version_no = "3.16"
 
 # macOS packaging support - comment in the below lines before building for mac
 #if getattr(sys, 'frozen', False):
@@ -401,7 +401,7 @@ async def directory_build():
 						ui.label("You can import links to additional dolls or replace the old ones.")
 					else:
 						ui.label("The file 'doll_directory.txt' appears to not contain any valid doll directory links. You can use this tool to import new links.")
-						ui.label("If you believe that the file should already contain valid links, please click 'Cancel' and review the contents of the file manually.")
+						ui.label("If you believe that the file should already contain valid links, please click 'CANCEL' and review the contents of the file manually.")
 				else:
 					ui.label("No file named 'doll_directory.txt' was found! You can use this tool to create it and import new doll directory links.")
 				with ui.row():
@@ -413,10 +413,11 @@ async def directory_build():
 
 	with ui.dialog().props("persistent") as import_html_dialog, ui.card().classes("bg-[#ffffff] dark:bg-[#18191e]"):
 		with ui.column().classes("items-center"):
-			ui.label("Go to your profile page on the DollDreaming forum and click on the 'Dolls' tab.")
-			ui.label("Right-click and select 'View page source' or an equivalent option (exact wording may depend on your browser).")
-			ui.label("Select the entire source text (Ctrl+A), then copy (Ctrl+C) and paste it (Ctrl+V) into the window below.")
-			input_directory_source = ui.textarea(placeholder='Paste the source code here...').style("width:380px;").classes("border")
+			with ui.column():
+				ui.label("Go to your profile page on the DollDreaming forum and click on the 'Dolls' tab.")
+				ui.label("Right-click and select 'View page source' or an equivalent option (exact wording may depend on your browser).")
+				ui.label("Select the entire source text (Ctrl+A), then copy (Ctrl+C) and paste it into the window below (Ctrl+V).")
+			input_directory_source = ui.textarea(placeholder='Paste the source text here...').style("width:380px;").classes("border")
 			with ui.row():
 				ui.button("Look for Dolls",on_click=lambda: import_html_dialog.submit(input_directory_source.value)).style("width:200px;")
 				ui.button("Cancel",on_click=lambda: import_html_dialog.submit(False)).props("color=secondary").style("width:200px;")
@@ -3627,14 +3628,13 @@ def page():
 			with ui.dialog() as help_new_directory_dialog, ui.card().classes("bg-[#ffffff] dark:bg-[#18191e]"):
 				with ui.column().classes("items-center"):
 					ui.icon("o_info", size="100px")
-					ui.label("Users of the DollDreaming forum can import photos directly from their doll directory. To do this, you will need to copy the links to your dolls' doll directory pages into the 'doll_directory.txt' file that is located in the working directory. (Delete the sample text inside the file first.) Put every link you want to enter on a separate line. Save the file, then click the 'DIRECTORY IMPORT' button.").style("max-width:450px;")
+					ui.label("Users of the DollDreaming forum can import photos directly from their doll directory. To do this, you will need to put the links to your dolls' doll directory pages into the 'doll_directory.txt' file located in the working directory. There are two ways to do this:").style("max-width:450px;")
+					ui.label("MANUALLY: Go to your dolls' doll directory entries and copy the URLs from the browser address bar into the 'doll_directory.txt' file. Delete the sample text inside the file first. Put every link you want to enter on a separate line and save the file.").style("max-width:450px;")
+					ui.label("AUTOMATICALLY: You can automatically generate the contents of 'doll_directory.txt' (or the whole file) by clicking on 'GENERATE FILE' and following the instructions. (You will need to copy the html source text of the 'Dolls' tab of your DollDreaming profile page. The program will then extract any doll directory links and write them to the text file.)").style("max-width:450px;")
+					ui.label("Once your 'doll_directory.txt' file is complete, click on 'DIRECTORY IMPORT' to import the photos into the signature generator.").style("max-width:450px;")
 					with ui.row():
 						ui.icon("o_announcement",color="primary", size="25px")
 						ui.label("The directory import is comparatively slow. - If you have your photos available locally, the batch import with 'SCAN FOLDER' will be substantially faster.").style("max-width:350px;")
-					ui.label("If you don't have a 'doll_directory.txt' file, you can create one yourself. Just make sure it's a plain text file (.txt), preferrably with Unicode (UTF-8) encoding.").style("max-width:450px;")
-					with ui.row():
-						ui.icon("o_announcement",color="primary", size="25px")
-						ui.label("For each doll directory page, you only need to add the link once. Even if you change the photos in the doll directory later, the directory import will always import the most up-to-date photos.").style("max-width:350px;")
 					ui.button("Close", on_click=help_new_directory_dialog.close, color="secondary")
 
 			with ui.row():
@@ -3642,9 +3642,9 @@ def page():
 				with ui.button_group().classes("col-span-3"):
 					with ui.button("Directory Import", icon="o_contact_page", on_click=lambda: directory_import()).style("width:200px;").classes("rounded-r-none rounded-l"):
 						ui.tooltip("Import photos from the Doll Directory").props("max-width='200px'").classes("default_tooltip")
-					with ui.button("Generate File", on_click=lambda: directory_build()).style("width:200px;").classes("rounded-none"):
+					ui.button(icon="o_help_outline", on_click=help_new_directory_dialog.open, color="secondary").style("width:35px;").classes("rounded-none")
+					with ui.button("Generate File", icon="o_description", on_click=lambda: directory_build()).style("width:200px;").classes("rounded-l-none rounded-r"):
 						ui.tooltip("Import new links into your 'doll_directory.txt' file").props("max-width='200px'").classes("default_tooltip")
-					ui.button(icon="o_help_outline", on_click=help_new_directory_dialog.open, color="secondary").style("width:35px;").classes("rounded-l-none rounded-r")
 
 			ui.separator()
 
