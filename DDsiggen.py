@@ -18,7 +18,7 @@ import requests
 #import sys     #macOS packaging support - comment in before building for mac
 
 #Version Number
-version_no = "3.16"
+version_no = "3.17"
 
 # macOS packaging support - comment in the below lines before building for mac
 #if getattr(sys, 'frozen', False):
@@ -72,7 +72,7 @@ async def import_quick_launch():
 	global import_progress
 	import_progress = 0
 	with ui.dialog().props("persistent") as import_quick_dialog, ui.card().classes("bg-[#ffffff] dark:bg-[#18191e]"):
-		ui.label("Any changes to the list of photos (Step 01.) will be lost. \n This cannot be undone!").style("white-space:pre-wrap;")
+		ui.label("Any changes to the list of photos (Step 01.) will be lost. \nThis cannot be undone!").style("white-space:pre-wrap;")
 		with ui.row():
 			ui.button("Re-Scan",on_click=lambda: import_quick_dialog.submit(False)).props("color=primary").style("width:200px;")
 			ui.button("Cancel",on_click=lambda: import_quick_dialog.submit(True)).props("color=secondary").style("width:200px;")
@@ -80,7 +80,7 @@ async def import_quick_launch():
 		with ui.row():
 			ui.spinner()
 			ui.label("Importing...")
-		bar_import_status = ui.linear_progress(value=0,show_value=False).style("width:200px;")
+		bar_import_status = ui.linear_progress(value=0,show_value=False).style("width:300px;")
 		ui.timer(0.1,lambda: bar_import_status.set_value(import_progress))
 
 	if I_quick:
@@ -148,7 +148,7 @@ async def import_new_launch():
 	import_progress = 0
 	with ui.dialog().props("persistent") as import_mode_dialog, ui.card().classes("bg-[#ffffff] dark:bg-[#18191e]"):
 		with ui.column().classes("items-center"):
-			ui.label("Entries already exist in the photo column. How do you wish to import the new photos?").style("max-width:300px;")
+			ui.label("Entries already exist in the photo column. \nHow do you wish to import the new photos?").style("max-width:300px; white-space:pre-wrap;")
 			ui.button("Overwrite",on_click=lambda: import_mode_dialog.submit("Overwrite")).style("width:200px;")
 			ui.button("Append",on_click=lambda: import_mode_dialog.submit("Append")).style("width:200px;")
 			ui.button("Cancel",on_click=lambda: import_mode_dialog.submit("Cancel")).props("color=secondary").style("width:200px;")
@@ -156,7 +156,7 @@ async def import_new_launch():
 		with ui.row():
 			ui.spinner()
 			label_import_status = ui.label("Importing...")
-		bar_import_status = ui.linear_progress(value=0,show_value=False).style("width:200px;")
+		bar_import_status = ui.linear_progress(value=0,show_value=False).style("width:300px;")
 		ui.timer(0.1,lambda: bar_import_status.set_value(import_progress))
 	if I_new:
 		import_mode = await import_mode_dialog
@@ -201,7 +201,7 @@ def image_from_url(image_url):
 
 async def import_from_url():
 	with ui.dialog().props("persistent") as import_url_dialog, ui.card().classes("bg-[#ffffff] dark:bg-[#18191e]"):
-		newurl = ui.input(label="Enter image URL:").style("width:400px;")
+		newurl = ui.input(label="Enter image URL:").style("width:410px;")
 		with ui.row():
 			ui.button("Import",on_click=lambda: import_url_dialog.submit(newurl.value)).style("width:200px;")
 			ui.button("Cancel",on_click=lambda: import_url_dialog.submit(False)).props("color=secondary").style("width:200px;")
@@ -316,11 +316,10 @@ async def directory_import():
 		new_dolls = f_dolls.readlines()
 		new_dolls = [i.rstrip() for i in new_dolls]
 		with ui.dialog().props("persistent") as import_directory_dialog, ui.card().classes("bg-[#ffffff] dark:bg-[#18191e]"):
-			with ui.column().classes("items-center"):
-				ui.label(f"About to import photos from {len(new_dolls)} doll directory entries. This may take some time. ")
-				with ui.row():
-					ui.button("Import",on_click=lambda: import_directory_dialog.submit(False)).style("width:200px;")
-					ui.button("Cancel",on_click=lambda: import_directory_dialog.submit(True)).props("color=secondary").style("width:200px;")
+			ui.label(f"About to import photos from {len(new_dolls)} doll directory entries. \nThis may take some time.").style("white-space:pre-wrap;")
+			with ui.row():
+				ui.button("Import",on_click=lambda: import_directory_dialog.submit(False)).style("width:200px;")
+				ui.button("Cancel",on_click=lambda: import_directory_dialog.submit(True)).props("color=secondary").style("width:200px;")
 		is_abort = await import_directory_dialog
 		if is_abort:
 			return
@@ -391,36 +390,33 @@ async def directory_build():
 				old_dolls.append(unquote(doll[start:-1]))
 
 	with ui.dialog().props("persistent") as view_directory_dialog, ui.card().classes("bg-[#ffffff] dark:bg-[#18191e]"):
-			with ui.column().classes("items-center"):
-				if directory_exists:
-					if old_dolls:
-						ui.label("Links to the following doll(s) were found in 'doll_directory.txt':")
-						with ui.scroll_area().classes("width-380px height-200px border"):
-							for doll in old_dolls:
-								ui.label(doll)
-						ui.label("You can import links to additional dolls or replace the old ones.")
-					else:
-						ui.label("The file 'doll_directory.txt' appears to not contain any valid doll directory links. You can use this tool to import new links.")
-						ui.label("If you believe that the file should already contain valid links, please click 'CANCEL' and review the contents of the file manually.")
-				else:
-					ui.label("No file named 'doll_directory.txt' was found! You can use this tool to create it and import new doll directory links.")
-				with ui.row():
-					ui.button("Start Import",on_click=lambda: view_directory_dialog.submit(False)).style("width:200px;")
-					ui.button("Cancel",on_click=lambda: view_directory_dialog.submit(True)).props("color=secondary").style("width:200px;")
+		if directory_exists:
+			if old_dolls:
+				ui.label("Links to the following doll(s) were found in 'doll_directory.txt':").style("max-width:410px;")
+				with ui.scroll_area().classes("width-380px height-200px border"):
+					for doll in old_dolls:
+						ui.label(doll)
+				ui.label("You can import links to additional dolls or replace the old ones.").style("max-width:410px;")
+			else:
+				ui.label("The file 'doll_directory.txt' appears to not contain any valid doll directory links. You can use this tool to import new links.").style("max-width:410px;")
+				ui.label("If you believe that the file should already contain valid links, please click 'CANCEL' and review the contents of the file manually.").style("max-width:410px;")
+		else:
+			ui.label("No file named 'doll_directory.txt' was found! You can use this tool to create it and import new doll directory links.").style("max-width:410px;")
+		with ui.row():
+			ui.button("Start Import",on_click=lambda: view_directory_dialog.submit(False)).style("width:200px;")
+			ui.button("Cancel",on_click=lambda: view_directory_dialog.submit(True)).props("color=secondary").style("width:200px;")
 	is_abort = await view_directory_dialog
 	if is_abort:
 		return
 
 	with ui.dialog().props("persistent") as import_html_dialog, ui.card().classes("bg-[#ffffff] dark:bg-[#18191e]"):
-		with ui.column().classes("items-center"):
-			with ui.column():
-				ui.label("Go to your profile page on the DollDreaming forum and click on the 'Dolls' tab.")
-				ui.label("Right-click and select 'View page source' or an equivalent option (exact wording may depend on your browser).")
-				ui.label("Select the entire source text (Ctrl+A), then copy (Ctrl+C) and paste it into the window below (Ctrl+V).")
-			input_directory_source = ui.textarea(placeholder='Paste the source text here...').style("width:380px;").classes("border")
-			with ui.row():
-				ui.button("Look for Dolls",on_click=lambda: import_html_dialog.submit(input_directory_source.value)).style("width:200px;")
-				ui.button("Cancel",on_click=lambda: import_html_dialog.submit(False)).props("color=secondary").style("width:200px;")
+		ui.label("Go to your profile page on the DollDreaming forum and click on the 'Dolls' tab.").style("max-width:410px;")
+		ui.label("Right-click and select 'View Page Source' or an equivalent option (exact wording may depend on your browser).").style("max-width:410px;")
+		ui.label("Select the entire source text (Ctrl+A), then copy (Ctrl+C) and paste it into the window below (Ctrl+V).").style("max-width:410px;")
+		input_directory_source = ui.textarea(placeholder='Paste the source text here...').style("width:410px;").classes("border")
+		with ui.row():
+			ui.button("Look for Dolls",on_click=lambda: import_html_dialog.submit(input_directory_source.value)).style("width:200px;")
+			ui.button("Cancel",on_click=lambda: import_html_dialog.submit(False)).props("color=secondary").style("width:200px;")
 	directory_source = await import_html_dialog
 	if not directory_source:
 		return
@@ -441,20 +437,20 @@ async def directory_build():
 	with ui.dialog().props("persistent") as append_directory_dialog, ui.card().classes("bg-[#ffffff] dark:bg-[#18191e]"):
 			with ui.column().classes("items-center"):
 				if new_dolls:
-					ui.label("Found new links to the following doll(s):")
+					ui.label("Found new links to the following doll(s):").style("max-width:410px;")
 					with ui.scroll_area().classes("width-380px height-200px border"):
 						for doll in new_dolls:
 							ui.label(doll)
 					if old_dolls:
-						ui.label("You can overwrite your existing links or append the new ones.")
+						ui.label("You can overwrite your existing links or append the new ones.").style("max-width:410px;")
 						ui.button("Overwrite",on_click=lambda: append_directory_dialog.submit("remake")).style("width:200px;")
 						ui.button("Append",on_click=lambda: append_directory_dialog.submit("append")).style("width:200px;")
 					else:
-						ui.label("Click 'GENERATE FILE' to (re)create the 'doll_directory.txt' file with the new links.")
+						ui.label("Click 'GENERATE FILE' to (re)create the 'doll_directory.txt' file with the new links.").style("max-width:410px;")
 						ui.button("Generate File",on_click=lambda: append_directory_dialog.submit("remake")).style("width:200px;")
 					ui.button("Cancel",on_click=lambda: append_directory_dialog.submit("cancel")).props("color=secondary").style("width:200px;")
 				else:
-					ui.label("No valid links to any dolls were found.")
+					ui.label("No valid links to any dolls were found.").style("max-width:300px;")
 					ui.button("Close",on_click=lambda: append_directory_dialog.submit("cancel")).props("color=secondary").style("width:200px;")
 	import_mode = await append_directory_dialog
 	if import_mode == "cancel":
@@ -514,7 +510,7 @@ async def import_namesE():
 
 	with ui.dialog().props("persistent") as import_mode_dialog, ui.card().classes("bg-[#ffffff] dark:bg-[#18191e]"):
 		with ui.column().classes("items-center"):
-			ui.label("Entries already exist in the name column. How do you wish to import the new names?").style("max-width:300px;")
+			ui.label("Entries already exist in the name column. \nHow do you wish to import the new names?").style("max-width:300px; white-space:pre-wrap;")
 			ui.button("Overwrite",on_click=lambda: import_mode_dialog.submit("Overwrite")).style("width:200px;")
 			ui.button("Append",on_click=lambda: import_mode_dialog.submit("Append")).style("width:200px;")
 			ui.button("Cancel",on_click=lambda: import_mode_dialog.submit("Cancel")).props("color=secondary").style("width:200px;")
@@ -564,7 +560,7 @@ async def import_namesJ():
 
 	with ui.dialog().props("persistent") as import_mode_dialog, ui.card().classes("bg-[#ffffff] dark:bg-[#18191e]"):
 		with ui.column().classes("items-center"):
-			ui.label("Entries already exist in the epithet column. How do you wish to import the new epithets?").style("max-width:300px;")
+			ui.label("Entries already exist in the epithet column. \n How do you wish to import the new epithets?").style("max-width:300px; white-space:pre-wrap;")
 			ui.button("Overwrite",on_click=lambda: import_mode_dialog.submit("Overwrite")).style("width:200px;")
 			ui.button("Append",on_click=lambda: import_mode_dialog.submit("Append")).style("width:200px;")
 			ui.button("Cancel",on_click=lambda: import_mode_dialog.submit("Cancel")).props("color=secondary").style("width:200px;")
@@ -669,10 +665,11 @@ async def I_new_renameE(current_idx) -> None:
 	currentnameE = namesE[current_idx]
 
 	with ui.dialog().props("persistent") as rename_dialog, ui.card().classes("bg-[#ffffff] dark:bg-[#18191e]"):
-		newname = ui.input(label="Enter new name:", value=currentnameE).style("width:200px;")
-		ui.button("Set New Name",on_click=lambda: rename_dialog.submit(newname.value)).style("width:200px;")
-		ui.button("Clear Name",on_click=lambda: rename_dialog.submit("")).props("color=negative").style("width:200px;")
-		ui.button("Cancel",on_click=lambda: rename_dialog.submit(currentnameE)).props("color=secondary").style("width:200px;")
+		with ui.column().classes("items-center"):
+			newname = ui.input(label="Enter new name:", value=currentnameE).style("width:300px;")
+			ui.button("Set New Name",on_click=lambda: rename_dialog.submit(newname.value)).style("width:200px;")
+			ui.button("Clear Name",on_click=lambda: rename_dialog.submit("")).props("color=negative").style("width:200px;")
+			ui.button("Cancel",on_click=lambda: rename_dialog.submit(currentnameE)).props("color=secondary").style("width:200px;")
 
 	newnameE = await rename_dialog
 	if newnameE!=currentnameE:
@@ -703,10 +700,11 @@ async def I_new_renameJ(current_idx) -> None:
 	currentnameJ = namesJ[current_idx]
 
 	with ui.dialog().props("persistent") as rename_dialog, ui.card().classes("bg-[#ffffff] dark:bg-[#18191e]"):
-		newname = ui.input(label="Enter new epithet:", value=currentnameJ).style("width:200px;")
-		ui.button("Set New Epithet",on_click=lambda: rename_dialog.submit(newname.value)).style("width:200px;")
-		ui.button("Clear Epithet",on_click=lambda: rename_dialog.submit("")).props("color=negative").style("width:200px;")
-		ui.button("Cancel",on_click=lambda: rename_dialog.submit(currentnameJ)).props("color=secondary").style("width:200px;")
+		with ui.column().classes("items-center"):
+			newname = ui.input(label="Enter new epithet:", value=currentnameJ).style("width:300px;")
+			ui.button("Set New Epithet",on_click=lambda: rename_dialog.submit(newname.value)).style("width:200px;")
+			ui.button("Clear Epithet",on_click=lambda: rename_dialog.submit("")).props("color=negative").style("width:200px;")
+			ui.button("Cancel",on_click=lambda: rename_dialog.submit(currentnameJ)).props("color=secondary").style("width:200px;")
 
 	newnameJ = await rename_dialog
 	if newnameJ!=currentnameJ:
@@ -1874,7 +1872,7 @@ async def I_new_cropimage(entry_nr):
 		with ui.row():
 			ui.spinner()
 			ui.label("Updating...")
-		bar_import_status = ui.linear_progress(value=0,show_value=False).style("width:200px;")
+		bar_import_status = ui.linear_progress(value=0,show_value=False).style("width:300px;")
 		ui.timer(0.1,lambda: bar_import_status.set_value(update_progress))
 
 	crop_mode = await cropimage_dialog
@@ -2119,7 +2117,7 @@ async def adjustaspect(newaspect):
 	update_progress = 0
 
 	with ui.dialog().props("persistent") as change_aspect_dialog, ui.card().classes("bg-[#ffffff] dark:bg-[#18191e]"):
-		ui.label("All photos will be reloaded and any custom crops will be removed. This cannot be undone!").style("max-width:300px;")
+		ui.label("All photos will be reloaded and any custom crops will be removed. This cannot be undone!").style("max-width:410px;")
 		with ui.row():
 			ui.button("Change Aspect Ratio",on_click=lambda: change_aspect_dialog.submit(False)).style("width:200px;")
 			ui.button("Cancel",on_click=lambda: change_aspect_dialog.submit(True)).props("color=secondary").style("width:200px;")
@@ -2128,7 +2126,7 @@ async def adjustaspect(newaspect):
 		with ui.row():
 			ui.spinner()
 			ui.label("Updating...")
-		bar_import_status = ui.linear_progress(value=0,show_value=False).style("width:200px;")
+		bar_import_status = ui.linear_progress(value=0,show_value=False).style("width:300px;")
 		ui.timer(0.1,lambda: bar_import_status.set_value(update_progress))
 
 	if I_new:
@@ -2260,10 +2258,20 @@ def update_imagesample():
 	#new_ui_imageSample.refresh()
 
 
-def save_settings(filename):
+async def save_settings(filename):
 	#global transpEmain
 	#global transpJmain
-	#"aMask_select": aMask_select,
+	#"aMask_select": aMask_select
+	with ui.dialog().props("persistent") as save_settings_dialog, ui.card().classes("bg-[#ffffff] dark:bg-[#18191e]"):
+		ui.label(f"The file '{filename}.json' already exists. Do you want to overwrite it with the new text settings?").style("max-width:410px;")
+		with ui.row():
+			ui.button("Overwrite",on_click=lambda: save_settings_dialog.submit(False)).style("width:200px;")
+			ui.button("Cancel",on_click=lambda: save_settings_dialog.submit(True)).props("color=secondary").style("width:200px;")
+
+	if Path(f"{filename}.json").is_file():
+		is_abort = await save_settings_dialog
+		if is_abort:
+			return
 	try:
 		with open(f"{filename}.json", "w") as savefile:
 			json.dump([{"names_priority": names_priority.value, "fontE": fontE.value, "colorEmain": colorEmain, "transpEmain": transpEmain, "sizeEmain": sizeEmain, "colorEoutline": colorEoutline, "transpEoutline": transpEoutline, "sizeEoutline": sizeEoutline, "fontJ": fontJ.value, "colorJmain": colorJmain, "transpJmain": transpJmain, "sizeJmain": sizeJmain, "colorJoutline": colorJoutline, "transpJoutline": transpJoutline, "sizeJoutline": sizeJoutline, "new_handle_oversize": new_handle_oversize.value, "oversize_margin": oversize_margin, "nameEalignX": nameEalignX, "nameEalignY": nameEalignY, "nameEoffsetX": nameEoffsetX, "nameEoffsetY": nameEoffsetY, "nameJalignX": nameJalignX, "nameJalignY": nameJalignY, "nameJoffsetX": nameJoffsetX, "nameJoffsetY": nameJoffsetY, "ISshadowE": ISshadowE, "shadowEoffsetX": shadowEoffsetX, "shadowEoffsetY": shadowEoffsetY, "shadowEblur": shadowEblur, "ISglowE": ISglowE, "colorEglow": colorEglow, "glowEoffsetX": glowEoffsetX, "glowEoffsetY": glowEoffsetY, "glowEblur": glowEblur, "ISshadowJ": ISshadowJ, "shadowJoffsetX": shadowJoffsetX, "shadowJoffsetY": shadowJoffsetY, "shadowJblur": shadowJblur, "ISglowJ": ISglowJ, "colorJglow": colorJglow, "glowJoffsetX": glowJoffsetX, "glowJoffsetY": glowJoffsetY, "glowJblur": glowJblur,}], savefile)
@@ -2315,8 +2323,12 @@ def load_settings(filename):
 	if I_new == []:
 		ui.notify("Please import some images first!")
 		return
-	with open(f"{filename}.json","r") as loadfile:
-		loaded_settings = json.load(loadfile)
+	try:
+		with open(f"{filename}.json","r") as loadfile:
+			loaded_settings = json.load(loadfile)
+	except:
+		ui.notify(f"File '{filename}.json' not found!")
+		return
 	names_priority.value = loaded_settings[0]["names_priority"]
 	if loaded_settings[0]["fontE"] in fonts_list:
 		fontE.value = loaded_settings[0]["fontE"]
@@ -2411,7 +2423,15 @@ def load_settings(filename):
 	update_textsample()
 	ui.notify(f"Settings loaded from '{filename}.json'")
 
-def exit_application():
+async def exit_application():
+	with ui.dialog().props("persistent") as exit_confirm_dialog, ui.card().classes("bg-[#ffffff] dark:bg-[#18191e]"):
+		ui.label("Really exit?").style("max-width:410px;")
+		with ui.row():
+			ui.button("Exit",on_click=lambda: exit_confirm_dialog.submit(False)).style("width:200px;")
+			ui.button("Cancel",on_click=lambda: exit_confirm_dialog.submit(True)).props("color=secondary").style("width:200px;")
+	is_abort = await exit_confirm_dialog
+	if is_abort:
+		return
 	with ui.dialog().props("persistent maximized") as exit_dialog, ui.card().classes("bg-[#ffffff] dark:bg-[#18191e]"):
 		ui.label("Application terminated! You can now close this browser tab.")
 	exit_dialog.open()
@@ -3628,9 +3648,9 @@ def page():
 			with ui.dialog() as help_new_directory_dialog, ui.card().classes("bg-[#ffffff] dark:bg-[#18191e]"):
 				with ui.column().classes("items-center"):
 					ui.icon("o_info", size="100px")
-					ui.label("Users of the DollDreaming forum can import photos directly from their doll directory. To do this, you will need to put the links to your dolls' doll directory pages into the 'doll_directory.txt' file located in the working directory. There are two ways to do this:").style("max-width:450px;")
-					ui.label("MANUALLY: Go to your dolls' doll directory entries and copy the URLs from the browser address bar into the 'doll_directory.txt' file. Delete the sample text inside the file first. Put every link you want to enter on a separate line and save the file.").style("max-width:450px;")
-					ui.label("AUTOMATICALLY: You can automatically generate the contents of 'doll_directory.txt' (or the whole file) by clicking on 'GENERATE FILE' and following the instructions. (You will need to copy the html source text of the 'Dolls' tab of your DollDreaming profile page. The program will then extract any doll directory links and write them to the text file.)").style("max-width:450px;")
+					ui.label("Users of the DollDreaming forum can import photos directly from their doll directory. For this, the links to your dolls' doll directory pages must be listed in the 'doll_directory.txt' file located in the working directory. There are two ways to enter links into the text file:").style("max-width:450px;")
+					ui.label("MANUALLY: Go to each of your dolls' doll directory page and copy the URL from the browser address bar into the 'doll_directory.txt' file. Delete the sample text inside the file first. Put every link you want to enter on a separate line and save the file.").style("max-width:450px;")
+					ui.label("AUTOMATICALLY: You can automatically generate the contents of 'doll_directory.txt' by clicking on 'GENERATE FILE' and following the instructions. (You will need to copy the html source text of the 'Dolls' tab of your DollDreaming profile page. The program will then extract any doll directory links and write them to the text file.)").style("max-width:450px;")
 					ui.label("Once your 'doll_directory.txt' file is complete, click on 'DIRECTORY IMPORT' to import the photos into the signature generator.").style("max-width:450px;")
 					with ui.row():
 						ui.icon("o_announcement",color="primary", size="25px")
